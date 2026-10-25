@@ -61,6 +61,17 @@ cd base-plate-web
 python3 server.py
 ```
 
+## Launch from Finder (Mac mini)
+
+Double-click **`Launch Base Plate Web.command`** in the `base-plate-web`
+folder. If the app is already running (e.g. via the launchd service
+below), it just opens the app in your browser. If it is not running,
+it starts the app in a Terminal window and opens the browser — keep
+that Terminal window open while you use the app, closing it stops the
+app. You can also drag the `.command` file to the Dock for one-click
+access. First time macOS may ask you to confirm opening it; that is
+normal for a script file.
+
 ## Deploy on the Mac mini (GitHub pull flow)
 
 Code never goes directly to the mini. It lives in the private GitHub
