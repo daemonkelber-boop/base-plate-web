@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  launchd template for the TAPP Base Plate web app (Mac mini, always-on).
+
+  Before installing:
+    1. Replace every YOURNAME below with your Mac username, and adjust the
+       project path if you keep the project somewhere other than
+       /Users/YOURNAME/base-plate-web.
+    2. Do a first manual run BEFORE installing this plist, so you know
+       the password gate works: cd ~/base-plate-web && python3 server.py
+    3. The app binds 127.0.0.1:8512 only. Sharing is via Tailscale Funnel
+       (see README.md); Funnel is a separate command, not this job.
+
+  Install (or let scripts/install-mini-services.sh do it for you):
+    cp com.user.base-plate-web.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.user.base-plate-web.plist
+
+  Stop:
+    launchctl unload ~/Library/LaunchAgents/com.user.base-plate-web.plist
+
+  Logs: /Users/YOURNAME/base-plate-web/logs/app.log (and app-error.log)
+  Note: a restart drops in-memory login sessions — just log in again.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.user.base-plate-web</string>
+
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/bin/python3</string>
+		<string>/Users/YOURNAME/base-plate-web/server.py</string>
+	</array>
+
+	<key>WorkingDirectory</key>
+	<string>/Users/YOURNAME/base-plate-web</string>
+
+	<key>RunAtLoad</key>
+	<true/>
+
+	<key>KeepAlive</key>
+	<true/>
+
+	<key>ThrottleInterval</key>
+	<integer>10</integer>
+
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+	</dict>
+
+	<key>StandardOutPath</key>
+	<string>/Users/YOURNAME/base-plate-web/logs/app.log</string>
+
+	<key>StandardErrorPath</key>
+	<string>/Users/YOURNAME/base-plate-web/logs/app-error.log</string>
+</dict>
+</plist>

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TAPP Base Plate — Web Calculator</title>
+<style>
+  body{font-family:-apple-system,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#f4f5f7;color:#1c2733}
+  header{background:#16324f;color:#fff;padding:14px 20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  header h1{font-size:19px;margin:0;flex:1}
+  header button{background:#fff;color:#16324f;border:0;border-radius:6px;padding:8px 12px;cursor:pointer;font-weight:600}
+  main{max-width:1100px;margin:0 auto;padding:16px}
+  section{background:#fff;border:1px solid #dde3ea;border-radius:10px;padding:16px;margin-bottom:16px}
+  h2{font-size:17px;margin:0 0 12px} h3{font-size:15px;margin:18px 0 8px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+  label{font-size:13px;color:#44546a;display:block}
+  label span{color:#16324f;font-weight:600}
+  input,select{width:100%;padding:8px;border:1px solid #c7d0da;border-radius:6px;font-size:15px;box-sizing:border-box}
+  button.primary{background:#16324f;color:#fff;border:0;border-radius:6px;padding:11px 18px;font-size:16px;cursor:pointer}
+  button.small{background:#e8edf2;border:0;border-radius:6px;padding:6px 10px;cursor:pointer}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{border-bottom:1px solid #e6ebf0;padding:6px 8px;text-align:left;vertical-align:top}
+  th{background:#f0f3f6}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+  .card{border:1px solid #dde3ea;border-radius:8px;padding:10px;background:#fafbfc}
+  .card b{font-size:20px;display:block;color:#16324f}
+  .card span{font-size:12px;color:#55677d}
+  .step{border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:10px}
+  .step h4{margin:0 0 6px;font-size:14px}
+  code{background:#f0f3f6;padding:2px 5px;border-radius:4px;font-size:12.5px;white-space:pre-wrap;word-break:break-word}
+  .explain{font-size:13.5px;color:#33475e}
+  .kv{font-size:12.5px;color:#55677d}
+  .ok{color:#0a7d33;font-weight:700} .bad{color:#c0272d;font-weight:700}
+  .gov{background:#fff7d6}
+  .note{font-size:13px;color:#55677d}
+  #casesTable input{width:100%;padding:5px;font-size:13px}
+  #casesTable td{padding:4px}
+  .err{background:#fdecea;border:1px solid #f5c6c6;padding:10px;border-radius:8px;color:#7a1414}
+</style>
+</head>
+<body>
+<header>
+  <h1>TAPP Base Plate V2.01 — Web Calculator</h1>
+  <button id="loadSample">Load STR017 sample</button>
+  <button id="runValidation">Run validation</button>
+</header>
+<main>
+<section>
+  <h2>Inputs</h2>
+  <h3>Pole geometry</h3>
+  <div class="grid">
+    <label>Sides <input id="sides" type="number" value="12"></label>
+    <label>Base OD (in) <input id="base_od" type="number" step="any" value="46.5"></label>
+    <label>Wall thickness (in) <input id="wall" type="number" step="any" value="0.3125"></label>
+    <label>Pole yield (ksi) <input id="pole_yield" type="number" step="any" value="65"></label>
+    <label>PLS shaft moment capacity (ft-k) <input id="shaft_capacity_ftk" type="number" step="any" value="2622.61"></label>
+    <label>Shaft capacity % (floor) <input id="shaft_capacity_perc" type="number" step="any" value="0.5"></label>
+  </div>
+  <h3>Anchor bolts</h3>
+  <div class="grid">
+    <label>Bolt diameter (in) <input id="bolt_dia" type="number" step="any" value="2.25"></label>
+    <label>Bolt grade <input id="bolt_grade" value='2.25"-18J'></label>
+    <label>Bolt yield (ksi) <input id="bolt_yield" type="number" step="any" value="75"></label>
+    <label>Bolt Fu (ksi) <input id="bolt_fu" type="number" step="any" value="100"></label>
+    <label>Tensile area As (in²) <input id="tensile_area" type="number" step="any" value="3.25"></label>
+    <label>Gross area Ag (in²) <input id="gross_area" type="number" step="any" value="3.9740625"></label>
+    <label>Nut width (in) <input id="nut_width" type="number" step="any" value="4.0625"></label>
+    <label>Hole diameter in plate (in) <input id="hole_dia" type="number" step="any" value="2.625"></label>
+    <label>Bolt at 0°?
+      <select id="bolt_at_0"><option value="yes" selected>Yes</option><option value="no">No</option></select></label>
+    <label>Bolt qty override (blank = calculated) <input id="bolt_qty_override" type="number" step="any"></label>
+    <label>Bolt circle override in (blank = calculated) <input id="bolt_circle_override" type="number" step="any"></label>
+  </div>
+  <h3>Base plate</h3>
+  <div class="grid">
+    <label>Plate shape
+      <select id="plate_shape"><option selected>Round</option><option>12-Sided</option><option>Square</option></select></label>
+    <label>Plate grade
+      <select id="plate_grade"><option selected>A572-60</option><option>A572-50</option><option>A36</option></select></label>
+    <label>Plate yield (ksi) <input id="plate_yield" type="number" step="any" value="60"></label>
+    <label>Edge allowance <input id="bp_edge" type="number" step="any" value="6"></label>
+    <label>Minimum thickness (in) <input id="min_thick" type="number" step="any" value="1.5"></label>
+    <label>Plate thickness override in (blank = calculated) <input id="plate_thick_override" type="number" step="any"></label>
+  </div>
+  <h3>Strength factors</h3>
+  <div class="grid">
+    <label>SF plate <input id="sf_plate" type="number" step="any" value="1"></label>
+    <label>SF bolt <input id="sf_bolt" type="number" step="any" value="1"></label>
+  </div>
+  <h3>Weights &amp; development length</h3>
+  <div class="grid">
+    <label>Rod weight (lb/ft) <input id="rod_w_lbft" type="number" step="any" value="14.63"></label>
+    <label>Template count <input id="template_count" type="number" value="2"></label>
+    <label>Template weight 1 (lb) <input id="template_w1" type="number" step="any" value="4.38"></label>
+    <label>Template weight 2 (lb) <input id="template_w2" type="number" step="any" value="0.89"></label>
+    <label>Template thickness 1 (in) <input id="template_t1" type="number" step="any" value="0.375"></label>
+    <label>Template thickness 2 (in) <input id="template_t2" type="number" step="any" value="0.375"></label>
+    <label>Template ID drop (in) <input id="template_id_drop" type="number" step="any" value="12"></label>
+    <label>Concrete f'c (ksi) <input id="fc_ksi" type="number" step="any" value="3"></label>
+    <label>Rod projection (in) <input id="projection_in" type="number" step="any" value="12"></label>
+  </div>
+  <h3>Load cases <button class="small" id="addCase">+ Add case</button></h3>
+  <p class="note">Moments in ft-k, forces in kips. A case whose raw resultant moment is below the 50% floor is scaled up to the floor in the same direction (sheet JY/JZ rule). A strength factor of 0 zeroes that case's plate usage.</p>
+  <table id="casesTable">
+    <thead><tr><th>Case name</th><th>Axial (k)</th><th>Shear (k)</th><th>Mx (ft-k)</th><th>My (ft-k)</th><th>Torsion (ft-k)</th><th>PLS SF</th><th></th></tr></thead>
+    <tbody id="casesBody"></tbody>
+  </table>
+  <p style="margin-top:14px"><button class="primary" id="calcBtn">Calculate base plate</button></p>
+  <div id="calcError"></div>
+</section>
+
+<section id="results" style="display:none">
+  <h2>Results</h2>
+  <div class="cards" id="summaryCards"></div>
+  <h3>Calculation steps — formula, plain explanation, inputs, result</h3>
+  <div id="steps"></div>
+  <h3>Per-case results</h3>
+  <div id="caseResults"></div>
+  <h3>Checks (sheet Valid / Error block)</h3>
+  <div id="checks"></div>
+</section>
+
+<section id="validation" style="display:none">
+  <h2>Validation against the Drive workbook</h2>
+  <p class="note">Tolerance: 0.5% relative. Mismatches are listed honestly — nothing is fudged. "Reference" samples show the workbook's cached values; their full input sets were not extracted, so they are not recomputed.</p>
+  <div id="validationBody"></div>
+</section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const num = (id, dflt) => { const v = $(id).value; return v === '' || v == null ? dflt : parseFloat(v); };
+const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmt = x => {
+  if (x == null) return '—';
+  if (typeof x === 'object') return esc(JSON.stringify(x));
+  if (typeof x === 'number') {
+    if (Math.abs(x) >= 10000) return x.toLocaleString(undefined, {maximumFractionDigits: 2});
+    return String(Math.round(x * 10000) / 10000);
+  }
+  return esc(x);
+};
+function kv(obj) {
+  if (obj == null || typeof obj !== 'object') return fmt(obj);
+  return Object.entries(obj).map(([k, v]) => {
+    if (Array.isArray(v) && v.length > 12) return `<b>${esc(k)}:</b> ${v.length} values, first: ${esc(JSON.stringify(v.slice(0, 4)))} …`;
+    if (Array.isArray(v) && v.length && typeof v[0] === 'object')
+      return `<b>${esc(k)}:</b><br>` + v.map(d => '&nbsp;&nbsp;' + Object.entries(d).map(([k2, v2]) => `${esc(k2)}=${Array.isArray(v2) ? '[' + v2.map(fmt).join(', ') + ']' : fmt(v2)}`).join(', ')).join('<br>');
+    return `<b>${esc(k)}:</b> ${Array.isArray(v) ? '[' + v.map(fmt).join(', ') + ']' : fmt(v)}`;
+  }).join('<br>');
+}
+function caseRow(c) {
+  const tr = document.createElement('tr');
+  const fields = ['name', 'axial', 'shear', 'mx', 'my', 'torsion', 'sf'];
+  fields.forEach(f => {
+    const td = document.createElement('td');
+    const inp = document.createElement('input');
+    inp.dataset.field = f;
+    inp.value = c[f] == null ? '' : c[f];
+    if (f !== 'name') inp.type = 'number', inp.step = 'any';
+    td.appendChild(inp); tr.appendChild(td);
+  });
+  const td = document.createElement('td');
+  const btn = document.createElement('button');
+  btn.className = 'small'; btn.textContent = '✕';
+  btn.onclick = () => tr.remove();
+  td.appendChild(btn); tr.appendChild(td);
+  return tr;
+}
+function readCases() {
+  const out = [];
+  document.querySelectorAll('#casesBody tr').forEach(tr => {
+    const c = {};
+    tr.querySelectorAll('input').forEach(inp => c[inp.dataset.field] = inp.value);
+    if (c.name || c.axial || c.mx || c.my) out.push(c);
+  });
+  return out;
+}
+function fillCases(cases) {
+  $('casesBody').innerHTML = '';
+  (cases || []).forEach(c => $('casesBody').appendChild(caseRow(c)));
+  if (!cases || !cases.length) $('casesBody').appendChild(caseRow({}));
+}
+$('addCase').onclick = () => $('casesBody').appendChild(caseRow({}));
+fillCases([{name: 'NESC Heavy (250B) FULL DE AHEAD-OW', axial: 15.25, shear: 43.302, mx: 858.87, my: 2332, torsion: 4.97, sf: 1}]);
+
+async function api(path, body) {
+  const r = await fetch(path, {method: body === undefined ? 'GET' : 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: body === undefined ? undefined : JSON.stringify(body)});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+  return j;
+}
+function gather() {
+  return {
+    sides: num('sides', 12), base_od: num('base_od'), wall: num('wall'),
+    pole_yield: num('pole_yield'), shaft_capacity_ftk: num('shaft_capacity_ftk'),
+    shaft_capacity_perc: num('shaft_capacity_perc'),
+    bolt_dia: num('bolt_dia'), bolt_grade: $('bolt_grade').value,
+    bolt_yield: num('bolt_yield'), bolt_fu: num('bolt_fu'),
+    tensile_area: num('tensile_area'), gross_area: num('gross_area'),
+    nut_width: num('nut_width'), hole_dia: num('hole_dia'),
+    bolt_at_0: $('bolt_at_0').value,
+    bolt_qty_override: $('bolt_qty_override').value,
+    bolt_circle_override: $('bolt_circle_override').value,
+    plate_shape: $('plate_shape').value, plate_grade: $('plate_grade').value,
+    plate_yield: num('plate_yield'), bp_edge: num('bp_edge'),
+    min_thick: num('min_thick'), plate_thick_override: $('plate_thick_override').value,
+    sf_plate: num('sf_plate', 1), sf_bolt: num('sf_bolt', 1),
+    rod_w_lbft: num('rod_w_lbft'), template_count: num('template_count', 2),
+    template_w1: num('template_w1'), template_w2: num('template_w2'),
+    template_t1: num('template_t1'), template_t2: num('template_t2'),
+    template_id_drop: num('template_id_drop'), fc_ksi: num('fc_ksi'),
+    projection_in: num('projection_in'),
+    cases: readCases()
+  };
+}
+function fillForm(p) {
+  const set = (id, v) => { if (v != null) $(id).value = v; };
+  set('sides', p.sides); set('base_od', p.base_od); set('wall', p.wall);
+  set('pole_yield', p.pole_yield); set('shaft_capacity_ftk', p.shaft_capacity_ftk);
+  set('shaft_capacity_perc', p.shaft_capacity_perc);
+  set('bolt_dia', p.bolt_dia); set('bolt_grade', p.bolt_grade);
+  set('bolt_yield', p.bolt_yield); set('bolt_fu', p.bolt_fu);
+  set('tensile_area', p.tensile_area); set('gross_area', p.gross_area);
+  set('nut_width', p.nut_width); set('hole_dia', p.hole_dia);
+  if (p.bolt_at_0 != null) $('bolt_at_0').value = p.bolt_at_0 ? 'yes' : 'no';
+  set('plate_shape', p.plate_shape); set('plate_grade', p.plate_grade);
+  set('plate_yield', p.plate_yield); set('bp_edge', p.bp_edge);
+  set('min_thick', p.min_thick); set('sf_plate', p.sf_plate); set('sf_bolt', p.sf_bolt);
+  fillCases(p.cases || []);
+}
+$('loadSample').onclick = async () => {
+  try {
+    const j = await api('/api/sample/str017');
+    fillForm(j.inputs);
+    $('calcError').innerHTML = '<p class="note">STR017 sample loaded — press Calculate.</p>';
+  } catch (e) { $('calcError').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
+};
+$('calcBtn').onclick = async () => {
+  $('calcError').innerHTML = '';
+  try {
+    const j = await api('/api/calculate', gather());
+    const s = j.summary;
+    $('results').style.display = '';
+    $('summaryCards').innerHTML = [
+      ['Overall', s.overall], ['AB usage', fmt(s.ab_usage)], ['BP usage', fmt(s.bp_usage)],
+      ['Plate thickness used (in)', fmt(s.plate_thick_use)],
+      ['Bolt circle used (in)', fmt(s.bolt_circle_use)],
+      ['Bolts used', s.bolt_qty_use], ['Plate width (in)', fmt(s.plate_width)],
+      ['Max rod force (kips)', fmt(s.max_rod_force)],
+      ['Rod capacity (kips)', fmt(s.rod_capacity)],
+      ['Plate final weight (lbs)', fmt(s.weights.plate_final)],
+      ['Anchor cage weight (lbs)', fmt(s.weights.cage_total)],
+      ['Governing case', s.governing_case]
+    ].map(([k, v]) => `<div class="card"><span>${esc(k)}</span><b>${v}</b></div>`).join('');
+    $('steps').innerHTML = j.steps.map(st => `
+      <div class="step"><h4>${esc(st.step)}</h4>
+      <div><code>${esc(st.formula)}</code></div>
+      <p class="explain">${esc(st.explain)}</p>
+      <div class="kv">Inputs — ${kv(st.inputs)}</div>
+      <div class="kv">Result — <b>${kv(st.result)}</b> ${st.unit ? esc(st.unit) : ''}</div>
+      </div>`).join('');
+    $('caseResults').innerHTML = `<table><thead><tr><th>Case</th><th>Axial</th><th>Shear</th><th>Mx used</th><th>My used</th><th>Torsion</th><th>SF</th><th>Max comp</th><th>Max ten*</th><th>Max shear</th><th>Max force</th><th>t_min</th><th>Usage</th></tr></thead><tbody>` +
+      j.cases.map(c => `<tr class="${c.name === s.governing_case ? 'gov' : ''}"><td>${esc(c.name)}</td><td>${fmt(c.axial)}</td><td>${fmt(c.shear)}</td><td>${fmt(c.mx_used)}</td><td>${fmt(c.my_used)}</td><td>${fmt(c.torsion)}</td><td>${fmt(c.sf)}</td><td>${fmt(c.max_comp)}</td><td>${fmt(c.max_ten)}</td><td>${fmt(c.max_shear)}</td><td><b>${fmt(c.max_force)}</b></td><td>${fmt(c.t_min)}</td><td><b>${fmt(c.usage)}</b></td></tr>`).join('') + `</tbody></table>
+      <p class="note">* Max ten follows the sheet's own definition: max compression minus the axial share per bolt (KG = KH − P/n). Highlighted row = governing case.</p>`;
+    $('checks').innerHTML = `<table><thead><tr><th>Check</th><th>Result</th><th>Formula</th><th>What it means</th><th>Detail</th></tr></thead><tbody>` +
+      s.checks.map(c => `<tr><td>${esc(c.name)}</td><td class="${c.result === 'Valid' ? 'ok' : 'bad'}">${esc(c.result)}</td><td><code>${esc(c.formula)}</code></td><td>${esc(c.explain)}</td><td>${esc(c.detail || '')}</td></tr>`).join('') + `</tbody></table>`;
+    $('results').scrollIntoView();
+  } catch (e) { $('calcError').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
+};
+$('runValidation').onclick = async () => {
+  try {
+    const j = await api('/api/validation');
+    $('validation').style.display = '';
+    $('validationBody').innerHTML = j.samples.map(s => {
+      if (s.type === 'reference') {
+        return `<h3>${esc(s.label)}</h3><p class="note">${esc(s.note)}</p><table><thead><tr><th>Field</th><th>Cached value</th></tr></thead><tbody>` +
+          Object.entries(s.cached).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${fmt(v)}</td></tr>`).join('') + `</tbody></table>`;
+      }
+      return `<h3>${esc(s.label)}</h3><p>Summary values: <b>${s.passed}/${s.total} pass</b> (tolerance 0.5%). Per-case rows compared: ${s.case_count}; worst per-case difference: ${fmt(s.worst_case_diff_pct)}%.</p>
+      <table><thead><tr><th>Value</th><th>App</th><th>Workbook</th><th>Diff %</th><th>Result</th></tr></thead><tbody>` +
+      s.checks.map(c => `<tr><td>${esc(c.name)}</td><td>${fmt(c.app)}</td><td>${fmt(c.expected)}</td><td>${c.diff_pct == null ? '—' : fmt(c.diff_pct)}</td><td class="${c.pass ? 'ok' : 'bad'}">${c.pass ? 'PASS' : 'FAIL'}</td></tr>`).join('') + `</tbody></table>` +
+      (s.case_mismatches.length ? `<p>Mismatching per-case rows (first ${s.case_mismatches.length}):</p><table><thead><tr><th>Case</th><th>Field</th><th>App</th><th>Workbook</th><th>Diff %</th></tr></thead><tbody>` +
+      s.case_mismatches.map(m => `<tr><td>${esc(m.case)}</td><td>${esc(m.field)}</td><td>${fmt(m.app)}</td><td>${fmt(m.expected)}</td><td>${fmt(m.diff_pct)}</td></tr>`).join('') + `</tbody></table>`
+      : `<p class="ok">All per-case max-bolt, thickness and usage values match within tolerance.</p>`);
+    }).join('');
+    $('validation').scrollIntoView();
+  } catch (e) { alert('Validation failed: ' + e.message); }
+};
+</script>
+</body>
+</html>

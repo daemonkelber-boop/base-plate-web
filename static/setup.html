@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TAPP Base Plate — Setup</title>
+<style>
+  body{font-family:-apple-system,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#f4f5f7;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+  .box{background:#fff;border:1px solid #dde3ea;border-radius:12px;padding:28px;width:340px}
+  h1{font-size:19px;margin:0 0 6px;color:#16324f} p{font-size:13px;color:#55677d}
+  input{width:100%;padding:10px;border:1px solid #c7d0da;border-radius:6px;font-size:16px;box-sizing:border-box;margin:8px 0}
+  button{width:100%;background:#16324f;color:#fff;border:0;border-radius:6px;padding:11px;font-size:16px;cursor:pointer}
+  .err{color:#c0272d;font-size:13px;min-height:18px} .ok{color:#0a7d33;font-size:13px}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>TAPP Base Plate — first-time setup</h1>
+  <p>No app password is set yet. Choose one now. Only its PBKDF2 hash + salt will be stored — never the password itself. (Prefer the <code>set_password.py</code> helper on the server instead of this page.)</p>
+  <input id="pw" type="password" placeholder="New password">
+  <input id="pw2" type="password" placeholder="Confirm password">
+  <div class="err" id="err"></div>
+  <div class="ok" id="ok"></div>
+  <button id="go">Set password</button>
+</div>
+<script>
+document.getElementById('go').onclick = async () => {
+  const pw = document.getElementById('pw').value;
+  const pw2 = document.getElementById('pw2').value;
+  const err = document.getElementById('err'), ok = document.getElementById('ok');
+  err.textContent = ''; ok.textContent = '';
+  if (pw !== pw2) { err.textContent = 'Passwords do not match.'; return; }
+  const r = await fetch('/api/setup', {method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({password: pw})});
+  const j = await r.json().catch(() => ({}));
+  if (r.ok && j.ok) { ok.textContent = 'Password set. Reloading…'; setTimeout(() => location.href = '/', 800); return; }
+  err.textContent = j.error || 'Setup failed';
+};
+</script>
+</body>
+</html>

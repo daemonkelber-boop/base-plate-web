@@ -1,0 +1,7 @@
+# Local-only runtime data. Never committed: the password hash lives here.
+data/
+logs/
+__pycache__/
+*.pyc
+# Workspace handoff note — not part of the app.
+HANDOFF.md
