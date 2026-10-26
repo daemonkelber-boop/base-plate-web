@@ -70,7 +70,7 @@
 </div>
 
 <div class="toolbar">
-  <span><b>Import from PLS-POLE XML</b> <span class="note">Prefills the form. Nothing is calculated on upload — review, then press Calculate.</span></span>
+  <span><b>Import from PLS-POLE XML</b> <span class="note">Prefills the form with all load cases from the file and calculates the base plate design automatically.</span></span>
   <input type="file" id="xmlFile" accept=".xml">
   <button class="small" id="uploadXml">Upload XML</button>
   <button class="primary" id="calcBtn">Calculate base plate</button>
@@ -120,7 +120,8 @@
     <tr><td>Base plate width (in)</td><td class="val"><span class="calc" id="calc_plate_width">—</span></td></tr>
     <tr><td>Base plate ID (in)</td><td class="val"><span class="calc" id="calc_plate_id">—</span></td></tr>
     <tr><td>Plate shape</td><td class="val"><select id="plate_shape"><option selected>Round</option><option>12-Sided</option><option>Square</option></select></td></tr>
-    <tr><td>Material Grade</td><td class="val"><select id="plate_grade"><option selected>A572-60</option><option>A572-50</option><option>A36</option></select></td></tr>
+    <tr><td>Material Grade</td><td class="val"><select id="plate_grade"><option selected>A572-60</option><option>A572-50</option><option>A572-42</option><option>A36</option></select></td></tr>
+    <tr><td colspan="2"><label style="font-size:12.5px"><input type="checkbox" id="use_a572_42_thick" checked> Use A572-42 (42 ksi) for plates over 4 in — default</label><br><span class="note">When this is on and the calculated thickness is over 4 in, the design is redone at 42 ksi as A572-42. Turn it off to keep the grade above.</span></td></tr>
     <tr><td>Plate Yield (ksi)</td><td class="val"><input class="num" id="plate_yield" type="number" step="any" value="60"></td></tr>
     <tr><td>BP Edge</td><td class="val"><input class="num" id="bp_edge" type="number" step="any" value="6"></td></tr>
     <tr><td>Min Thick (in)</td><td class="val"><input class="num" id="min_thick" type="number" step="any" value="1.5"></td></tr>
@@ -271,7 +272,8 @@ function gather() {
     bolt_qty_override: $('bolt_qty_override').value,
     bolt_circle_override: $('bolt_circle_override').value,
     plate_shape: $('plate_shape').value, plate_grade: $('plate_grade').value,
-    plate_yield: num('plate_yield'), bp_edge: num('bp_edge'),
+    plate_yield: num('plate_yield'), use_a572_42_thick: $('use_a572_42_thick').checked,
+    bp_edge: num('bp_edge'),
     min_thick: num('min_thick'), plate_thick_override: $('plate_thick_override').value,
     sf_plate: num('sf_plate', 1), sf_bolt: num('sf_bolt', 1),
     rod_w_lbft: num('rod_w_lbft'), template_count: num('template_count', 2),
@@ -314,7 +316,7 @@ function applyLeg(leg) {
   if (ep.bolt_diam != null) set('bolt_dia', ep.bolt_diam);
   if (ep.plate_yield != null) {
     set('plate_yield', ep.plate_yield);
-    const g = {50: 'A572-50', 60: 'A572-60', 36: 'A36'}[ep.plate_yield];
+    const g = {50: 'A572-50', 60: 'A572-60', 42: 'A572-42', 36: 'A36'}[ep.plate_yield];
     if (g) $('plate_grade').value = g;
   }
   if (ep.plate_shape === '0') $('plate_shape').value = 'Round';
@@ -335,7 +337,10 @@ function legNote(leg, ep) {
 function applyImport(leg, cases) {
   const ep = applyLeg(leg);
   fillCases(cases || []);
-  $('xmlStatus').innerHTML = `<p class="note">${legNote(leg, ep)}<br><b>${(cases || []).length} load cases prefilled — review, then press Calculate.</b></p>`;
+  $('xmlStatus').innerHTML = `<p class="note">${legNote(leg, ep)}<br><b>${(cases || []).length} load cases prefilled — calculating the base plate design now.</b></p>`;
+  // Upload (and any leg / reaction-set change) calculates automatically:
+  // no separate Calculate press is needed after an upload.
+  $('calcBtn').click();
 }
 $('uploadXml').onclick = async () => {
   const f = $('xmlFile').files[0];
@@ -395,8 +400,15 @@ $('calcBtn').onclick = async () => {
     setCalc('calc_rod_length', s.weights.rod_length_ft);
     $('calc_overall').textContent = s.overall;
     $('calc_overall').className = 'calc ' + (s.overall === 'OK' ? 'ok' : 'bad');
+    let gradeNote = '';
+    if (s.a572_42_applied) {
+      // Show what was actually used, so a second Calculate is stable.
+      $('plate_grade').value = 'A572-42';
+      $('plate_yield').value = 42;
+      gradeNote = ' &nbsp;|&nbsp; <b>Switched to A572-42 (42 ksi): calculated thickness was over 4 in — see the calculation step.</b>';
+    }
     $('summarySentence').style.display = '';
-    $('summarySentence').innerHTML = `<b>Summary:</b> Base Plate — ${fmt(s.plate_thick_use)} in Thick, ${esc($('plate_shape').value)} Plate ${fmt(s.plate_width)} in O.D. — (${s.bolt_qty_use}) - ${esc($('bolt_grade').value)} Anchor Bolts on ${fmt(s.bolt_circle_use)}" BCD — Overall: <b>${esc(s.overall)}</b> &nbsp;|&nbsp; Governing case: ${esc(s.governing_case)}`;
+    $('summarySentence').innerHTML = `<b>Summary:</b> Base Plate — ${fmt(s.plate_thick_use)} in Thick, ${esc($('plate_shape').value)} Plate ${fmt(s.plate_width)} in O.D. — (${s.bolt_qty_use}) - ${esc($('bolt_grade').value)} Anchor Bolts on ${fmt(s.bolt_circle_use)}" BCD — Overall: <b>${esc(s.overall)}</b> &nbsp;|&nbsp; Governing case: ${esc(s.governing_case)}${gradeNote}`;
     $('summaryCards').innerHTML = [
       ['Overall', s.overall], ['AB usage', fmt(s.ab_usage)], ['BP usage', fmt(s.bp_usage)],
       ['Plate thickness used (in)', fmt(s.plate_thick_use)],

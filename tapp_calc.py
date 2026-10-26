@@ -85,6 +85,10 @@ DEFAULTS = {
     "plate_shape": "Round",
     "plate_grade": "A572-60",
     "plate_yield": 60.0,
+    # A572-42 thick-plate rule (user rule, not the Excel sheet's):
+    # when ON (the default) and the calculated thickness exceeds 4 in,
+    # the design is redone at 42 ksi as A572-42 (see plate thickness).
+    "use_a572_42_thick": True,
     "bp_edge": 6.0,
     "min_thick": 1.5,
     "plate_thick_override": None,
@@ -112,6 +116,7 @@ DEFAULTS = {
 GRADE_YIELDS = {  # grade -> yield ksi (sheet GRDTABLEC45 rows; extend as needed)
     "A572-60": 60.0,
     "A572-50": 50.0,
+    "A572-42": 42.0,
     "A36": 36.0,
 }
 
@@ -148,6 +153,9 @@ def clean_inputs(raw):
         if raw.get(k) not in (None, ""):
             p[k] = str(raw[k])
     p["bolt_at_0"] = str(raw.get("bolt_at_0", "yes")).lower() in ("yes", "true", "1", "y")
+    if "use_a572_42_thick" in raw:
+        v = raw.get("use_a572_42_thick")
+        p["use_a572_42_thick"] = v is True or str(v).lower() in ("true", "yes", "1", "y", "on")
     for k, out in (("bolt_qty_override", "bolt_qty_override"),
                    ("plate_thick_override", "plate_thick_override"),
                    ("bolt_circle_override", "bolt_circle_override")):
@@ -589,10 +597,11 @@ def compute(p):
 
     # ---- plate thickness ----------------------------------------------------
     fy_plate = p["plate_yield"]
+    effective_plate_grade = p["plate_grade"]
+    effective_plate_yield = fy_plate
     t_req = math.sqrt(m_gov * 6.0 / (bl_width * fy_plate * p["sf_plate"])) \
         if bl_width > 0 and fy_plate > 0 else 0.0
     t_calc = max(p["min_thick"], ceil_to(t_req, 0.25)) if t_req > 0 else p["min_thick"]
-    t_use = p["plate_thick_override"] if p["plate_thick_override"] else t_calc
     steps.append({"step": "Required plate thickness (governing)",
                   "formula": "t_req = SQRT(governing bend-line moment x 6 / "
                              "(Bl x plate_yield x SF_plate))",
@@ -602,6 +611,38 @@ def compute(p):
                   "inputs": {"governing moment": round(m_gov, 3), "Bl": round(bl_width, 4),
                              "plate yield": fy_plate, "SF": p["sf_plate"]},
                   "result": t_req, "unit": "in"})
+    # A572-42 thick-plate rule (user rule, NOT the Excel sheet's):
+    # when the default toggle is on and the calculated thickness is
+    # over 4 in, redo the thickness at 42 ksi as A572-42. t_req scales
+    # as 1/SQRT(fy), so the new demand is t_req x SQRT(old fy / 42).
+    # It does not apply when the selected yield is already 42 ksi or
+    # lower (nothing to drop to), and a thickness of exactly 4.0 in
+    # does not trigger it (strictly over 4 in).
+    a572_42_applied = False
+    if p.get("use_a572_42_thick") and t_calc > 4.0 and fy_plate > 42.0:
+        fy0, t_req0, t_calc0 = fy_plate, t_req, t_calc
+        fy_plate = 42.0
+        effective_plate_grade = "A572-42"
+        effective_plate_yield = 42.0
+        t_req = t_req0 * math.sqrt(fy0 / 42.0)
+        t_calc = max(p["min_thick"], ceil_to(t_req, 0.25)) if t_req > 0 else p["min_thick"]
+        a572_42_applied = True
+        steps.append({"step": "A572-42 for plates over 4 in (default rule)",
+                      "formula": "if t_calc > 4 in and plate_yield > 42 ksi: "
+                                 "t_req_new = t_req x SQRT(old yield / 42); "
+                                 "t_calc_new = MAX(min_thick, CEILING(t_req_new, 0.25))",
+                      "explain": "Thick plates are designed in A572-42 steel (42 ksi) "
+                                 "instead of the higher grade first selected, so the "
+                                 "thickness is redone at the lower yield. Turn the "
+                                 "'Use A572-42 for plates over 4 in' box off to keep "
+                                 "the original grade's thickness instead.",
+                      "inputs": {"t_calc at selected grade": t_calc0,
+                                 "selected yield": fy0, "new yield": 42.0,
+                                 "t_req at selected grade": round(t_req0, 4)},
+                      "result": {"t_req": round(t_req, 4), "t_calc": t_calc,
+                                 "grade used": "A572-42", "yield used": 42.0},
+                      "unit": "in"})
+    t_use = p["plate_thick_override"] if p["plate_thick_override"] else t_calc
     steps.append({"step": "Plate thickness calculated / used",
                   "formula": "t_calc = MAX(min_thick, CEILING(t_req, 0.25)); "
                              "t_use = override if given, else t_calc",
@@ -609,7 +650,9 @@ def compute(p):
                              "the 1.5 in. minimum, so the required thickness is rounded "
                              "up to the next quarter inch.",
                   "inputs": {"t_req": round(t_req, 4), "min": p["min_thick"],
-                             "override": p["plate_thick_override"]},
+                             "override": p["plate_thick_override"],
+                             "grade used": effective_plate_grade,
+                             "yield used": effective_plate_yield},
                   "result": {"t_calc": t_calc, "t_use": t_use}, "unit": "in"})
 
     # ---- per-case plate usage ------------------------------------------------
@@ -689,11 +732,11 @@ def compute(p):
                         "With no bolt at zero degrees and exactly 12 bolts, the sheet "
                         "asks whether a bolt at zero was intended.",
                         orient_ok, ""))
-    grade_ok = p["plate_grade"] in GRADE_YIELDS
+    grade_ok = effective_plate_grade in GRADE_YIELDS
     checks.append(check("Material grade check",
                         "plate grade must be in the allowed grade list",
                         "Only grades the sheet's table knows can be looked up.",
-                        grade_ok, f"grade {p['plate_grade']}"))
+                        grade_ok, f"grade {effective_plate_grade}"))
     shape_ok = not ((n == 4 and p["plate_shape"] == "Round") or
                     (n > 4 and p["plate_shape"] == "Square"))
     checks.append(check("Plate shape check",
@@ -811,6 +854,9 @@ def compute(p):
         "bolt_qty_calc": rods, "bolt_qty_use": n,
         "plate_width": width, "plate_id": plate_id,
         "plate_thick_calc": t_calc, "plate_thick_use": t_use,
+        "plate_grade_used": effective_plate_grade,
+        "plate_yield_used": effective_plate_yield,
+        "a572_42_applied": a572_42_applied,
         "t_req": t_req, "bend_line_width": bl_width,
         "bend_line_moments": bl_moments, "governing_moment": m_gov,
         "governing_case": gov_name, "floor_moment": floor_moment,

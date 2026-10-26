@@ -22,6 +22,15 @@ and anchor bolts and gives a YES/NO verdict per pole.
   strength factor is 0, the Valid/Error check block, and weights.
   Where the Basis document flags a TAPP-specific rule vs ASCE 48-19,
   the app follows TAPP.
+- **A572-42 thick-plate rule (user rule, not the Excel sheet's):**
+  when the "Use A572-42 for plates over 4 in" box is on (the
+  default), and the calculated thickness is over 4 in, the design
+  is redone at 42 ksi as A572-42 (t_req scales by SQRT(old yield /
+  42)), and the summary shows the grade actually used. It does not
+  apply when the selected yield is already 42 ksi or lower, and
+  exactly 4.0 in does not trigger it. Turn the box off to keep the
+  original grade's thickness. A572-42 is also selectable directly
+  in the grade list.
 - **Layout:** sheet-style, like the Excel structure sheet — Pole
   Geometry | Anchor Bolt Data | Base Plate Properties | Checks &
   Weights side by side, a summary sentence, then the load-case table.
@@ -51,8 +60,11 @@ and anchor bolts and gives a YES/NO verdict per pole.
 
 ## PLS-POLE XML import
 
-Upload a PLS-POLE `.xml` export and the form is prefilled — nothing is
-calculated on upload. Review the values, then press Calculate.
+Upload a PLS-POLE `.xml` export and the form is prefilled with all
+load cases from the file, then the base plate design is calculated
+automatically — no Calculate press is needed after an upload.
+Changing the pole/leg or reaction-set picker recalculates the same
+way. The Calculate button remains for after manual edits.
 
 - **Endpoint:** `POST /api/import-xml` (login required), body is
   `multipart/form-data` with the file in the field named `file`.
