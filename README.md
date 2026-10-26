@@ -10,8 +10,10 @@ and anchor bolts and gives a YES/NO verdict per pole.
 - **Inputs:** pole geometry (shape, base OD, wall, yield, PLS shaft
   moment capacity and floor %), anchor bolts (size, grade, yield, Fu,
   tensile/gross area, nut width, hole dia, bolt-at-0°, optional count and
-  bolt-circle overrides), base plate (round / 12-sided / square, grade,
-  yield, edge allowance, minimum thickness, optional thickness override),
+  bolt-circle overrides), base plate (round / 12-sided / square, grade
+  — yield follows the grade: A572-60 = 60, A572-50 = 50, A572-42 = 42,
+  A36 = 36 ksi; default starting grade A572-50 — edge allowance,
+  minimum thickness, optional thickness override),
   strength factors, and an editable load-case table (axial, shear,
   transverse/longitudinal moment, torsion, PLS strength factor per case).
 - **Engine** (`base_plate_calc.py`, separate from the server): bolt-circle
@@ -76,8 +78,9 @@ way. The Calculate button remains for after manual edits.
 - **What is extracted, per pole/leg:** shape/sides (leading digits of
   the PLS shape, e.g. `12F` → 12), base OD (base tube's bottom
   diameter), base wall and yield (base tube = highest tube number),
-  shaft moment capacity (see below), bolt diameter and plate yield
-  from the model's existing base plate, if it has one, and the full
+  shaft moment capacity (see below), bolt diameter and plate grade
+  (from the existing plate's yield, if it has one — yield follows
+  the grade) and the full
   load-case table from the base support reactions.
 - **Load-case mapping** (forces in kips, moments in ft-k, PLS-POLE
   convention): case name = the reaction table's load case description;

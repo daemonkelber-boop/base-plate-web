@@ -81,10 +81,12 @@ DEFAULTS = {
     "hole_dia": 2.625,
     "bolt_at_0": True,
     "bolt_qty_override": None,
-    # plate
+    # plate — default starting grade is A572-50 (50 ksi); the yield
+    # always follows the grade (see clean_inputs), there is no
+    # separate yield input in the UI.
     "plate_shape": "Round",
-    "plate_grade": "A572-60",
-    "plate_yield": 60.0,
+    "plate_grade": "A572-50",
+    "plate_yield": 50.0,
     # A572-42 thick-plate rule (user rule, not the Excel sheet's):
     # when ON (the default) and the calculated thickness exceeds 4 in,
     # the design is redone at 42 ksi as A572-42 (see plate thickness).
@@ -152,6 +154,11 @@ def clean_inputs(raw):
     for k in ("bolt_grade", "plate_shape", "plate_grade"):
         if raw.get(k) not in (None, ""):
             p[k] = str(raw[k])
+    # Plate yield follows the grade when no yield is supplied
+    # (the UI sends grade only). An explicitly supplied yield still
+    # wins, so older callers that send both keep working.
+    if raw.get("plate_yield") in (None, "") and p["plate_grade"] in GRADE_YIELDS:
+        p["plate_yield"] = GRADE_YIELDS[p["plate_grade"]]
     p["bolt_at_0"] = str(raw.get("bolt_at_0", "yes")).lower() in ("yes", "true", "1", "y")
     if "use_a572_42_thick" in raw:
         v = raw.get("use_a572_42_thick")

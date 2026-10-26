@@ -120,9 +120,9 @@
     <tr><td>Base plate width (in)</td><td class="val"><span class="calc" id="calc_plate_width">—</span></td></tr>
     <tr><td>Base plate ID (in)</td><td class="val"><span class="calc" id="calc_plate_id">—</span></td></tr>
     <tr><td>Plate shape</td><td class="val"><select id="plate_shape"><option selected>Round</option><option>12-Sided</option><option>Square</option></select></td></tr>
-    <tr><td>Material Grade</td><td class="val"><select id="plate_grade"><option selected>A572-60</option><option>A572-50</option><option>A572-42</option><option>A36</option></select></td></tr>
+    <tr><td>Material Grade</td><td class="val"><select id="plate_grade"><option>A572-60</option><option selected>A572-50</option><option>A572-42</option><option>A36</option></select></td></tr>
+    <tr><td colspan="2"><span class="note">Yield follows the grade: A572-60 = 60 ksi, A572-50 = 50 ksi, A572-42 = 42 ksi, A36 = 36 ksi.</span></td></tr>
     <tr><td colspan="2"><label style="font-size:12.5px"><input type="checkbox" id="use_a572_42_thick" checked> Use A572-42 (42 ksi) for plates over 4 in — default</label><br><span class="note">When this is on and the calculated thickness is over 4 in, the design is redone at 42 ksi as A572-42. Turn it off to keep the grade above.</span></td></tr>
-    <tr><td>Plate Yield (ksi)</td><td class="val"><input class="num" id="plate_yield" type="number" step="any" value="60"></td></tr>
     <tr><td>BP Edge</td><td class="val"><input class="num" id="bp_edge" type="number" step="any" value="6"></td></tr>
     <tr><td>Min Thick (in)</td><td class="val"><input class="num" id="min_thick" type="number" step="any" value="1.5"></td></tr>
     <tr><td>Plate Thick Calc (in)</td><td class="val"><span class="calc" id="calc_plate_thick_calc">—</span></td></tr>
@@ -279,7 +279,10 @@ function gather() {
     bolt_qty_override: $('bolt_qty_override').value,
     bolt_circle_override: $('bolt_circle_override').value,
     plate_shape: $('plate_shape').value, plate_grade: $('plate_grade').value,
-    plate_yield: num('plate_yield'), use_a572_42_thick: $('use_a572_42_thick').checked,
+    // Plate yield follows the grade (no separate yield box):
+    // A572-60 = 60, A572-50 = 50, A572-42 = 42, A36 = 36 ksi.
+    plate_yield: {'A572-60': 60, 'A572-50': 50, 'A572-42': 42, 'A36': 36}[$('plate_grade').value] || 50,
+    use_a572_42_thick: $('use_a572_42_thick').checked,
     bp_edge: num('bp_edge'),
     min_thick: num('min_thick'), plate_thick_override: $('plate_thick_override').value,
     sf_plate: num('sf_plate', 1), sf_bolt: num('sf_bolt', 1),
@@ -302,7 +305,7 @@ function fillForm(p) {
   set('nut_width', p.nut_width); set('hole_dia', p.hole_dia);
   if (p.bolt_at_0 != null) $('bolt_at_0').value = p.bolt_at_0 ? 'yes' : 'no';
   set('plate_shape', p.plate_shape); set('plate_grade', p.plate_grade);
-  set('plate_yield', p.plate_yield); set('bp_edge', p.bp_edge);
+  set('bp_edge', p.bp_edge);
   set('min_thick', p.min_thick); set('sf_plate', p.sf_plate); set('sf_bolt', p.sf_bolt);
   fillCases(p.cases || []);
 }
@@ -322,7 +325,7 @@ function applyLeg(leg) {
   const ep = leg.existing_plate || {};
   if (ep.bolt_diam != null) set('bolt_dia', ep.bolt_diam);
   if (ep.plate_yield != null) {
-    set('plate_yield', ep.plate_yield);
+    // Yield follows the grade, so only the grade is set here.
     const g = {50: 'A572-50', 60: 'A572-60', 42: 'A572-42', 36: 'A36'}[ep.plate_yield];
     if (g) $('plate_grade').value = g;
   }
@@ -428,8 +431,8 @@ $('calcBtn').onclick = async () => {
     let gradeNote = '';
     if (s.a572_42_applied) {
       // Show what was actually used, so a second Calculate is stable.
+      // Yield follows the grade, so only the grade needs setting.
       $('plate_grade').value = 'A572-42';
-      $('plate_yield').value = 42;
       gradeNote = ' &nbsp;|&nbsp; <b>Switched to A572-42 (42 ksi): calculated thickness was over 4 in — see the calculation step.</b>';
     }
     $('summarySentence').style.display = '';
