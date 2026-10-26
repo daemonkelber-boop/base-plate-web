@@ -47,6 +47,14 @@
 <main>
 <section>
   <h2>Inputs</h2>
+  <h3>Import from PLS-POLE XML</h3>
+  <p class="note">Upload a PLS-POLE .xml export to prefill the form. Nothing is calculated on upload — review the values, then press Calculate.</p>
+  <p><input type="file" id="xmlFile" accept=".xml"> <button class="small" id="uploadXml">Upload XML</button></p>
+  <div id="xmlStatus"></div>
+  <div id="legPicker" style="display:none">
+    <label>Pole / leg <select id="legSelect"></select></label>
+    <label id="rxnWrap" style="display:none">Reaction set (base joint) <select id="rxnSelect"></select></label>
+  </div>
   <h3>Pole geometry</h3>
   <div class="grid">
     <label>Sides <input id="sides" type="number" value="12"></label>
@@ -236,6 +244,76 @@ $('loadSample').onclick = async () => {
     fillForm(j.inputs);
     $('calcError').innerHTML = '<p class="note">STR017 sample loaded — press Calculate.</p>';
   } catch (e) { $('calcError').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
+};
+let importedData = null;
+function applyLeg(leg) {
+  const set = (id, v) => { if (v != null) $(id).value = v; };
+  set('sides', leg.sides); set('base_od', leg.base_od); set('wall', leg.wall);
+  set('pole_yield', leg.pole_yield);
+  if (leg.shaft_capacity_ftk != null) set('shaft_capacity_ftk', Math.round(leg.shaft_capacity_ftk * 100) / 100);
+  const ep = leg.existing_plate || {};
+  if (ep.bolt_diam != null) set('bolt_dia', ep.bolt_diam);
+  if (ep.plate_yield != null) {
+    set('plate_yield', ep.plate_yield);
+    const g = {50: 'A572-50', 60: 'A572-60', 36: 'A36'}[ep.plate_yield];
+    if (g) $('plate_grade').value = g;
+  }
+  if (ep.plate_shape === '0') $('plate_shape').value = 'Round';
+  return ep;
+}
+function legNote(leg, ep) {
+  const bits = [];
+  bits.push(`Pole ${esc(leg.label)} (${esc(leg.shape || '?')}, base OD ${fmt(leg.base_od)} in, wall ${fmt(leg.wall)} in, yield ${fmt(leg.pole_yield)} ksi)`);
+  if (leg.shaft_capacity_ftk != null) bits.push(`shaft capacity ${fmt(leg.shaft_capacity_ftk)} ft-k (${esc(leg.shaft_capacity_note || '')})`);
+  else bits.push('shaft capacity not found in the file — left at the current form value, check it before calculating (it sets the 50% floor)');
+  if (!leg.base_plate_in_model) bits.push('PLS model has no base plate — designing a new one');
+  if (ep && ep.plate_diam != null) bits.push(`existing PLS plate: ${fmt(ep.plate_diam)} in dia × ${fmt(ep.plate_thick)} in, bolt circle ${fmt(ep.bolt_pattern_diam)} in, ${fmt(ep.num_bolts)} bolts — shown for comparison only, not applied as overrides`);
+  if (leg.sides == null) bits.push('pole shape had no side count — sides left unchanged, check it');
+  if (leg.cases_note) bits.push(esc(leg.cases_note));
+  bits.push('Bolt grade, areas, hole diameter, and plate edge/minimum thickness are not in the XML and were left at their current values.');
+  return bits.join('<br>');
+}
+function applyImport(leg, cases) {
+  const ep = applyLeg(leg);
+  fillCases(cases || []);
+  $('xmlStatus').innerHTML = `<p class="note">${legNote(leg, ep)}<br><b>${(cases || []).length} load cases prefilled — review, then press Calculate.</b></p>`;
+}
+$('uploadXml').onclick = async () => {
+  const f = $('xmlFile').files[0];
+  if (!f) { $('xmlStatus').innerHTML = '<div class="err">Choose a .xml file first.</div>'; return; }
+  $('xmlStatus').innerHTML = '<p class="note">Importing…</p>';
+  try {
+    const fd = new FormData();
+    fd.append('file', f);
+    const r = await fetch('/api/import-xml', {method: 'POST', body: fd});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    importedData = j;
+    const legs = j.legs || [];
+    if (!legs.length) throw new Error('No poles found in the file.');
+    $('legPicker').style.display = '';
+    $('legSelect').innerHTML = legs.map((l, i) => `<option value="${i}">${esc(l.label)}${l.base_od != null ? ' — ' + fmt(l.base_od) + ' in base' : ''}</option>`).join('');
+    const pick = () => {
+      const leg = legs[parseInt($('legSelect').value, 10)];
+      if (leg.cases) {
+        $('rxnWrap').style.display = 'none';
+        applyImport(leg, leg.cases);
+      } else {
+        $('rxnWrap').style.display = '';
+        $('rxnSelect').innerHTML = (j.reaction_sets || []).map((s, i) => `<option value="${i}">${esc(s.joint_label)} (${s.cases.length} cases)</option>`).join('');
+        const rs = (j.reaction_sets || [])[0];
+        if (rs) applyImport(leg, rs.cases);
+        else $('xmlStatus').innerHTML = '<div class="err">No reaction set could be matched to this pole. Pick a different leg or check the file.</div>';
+      }
+    };
+    $('legSelect').onchange = pick;
+    $('rxnSelect').onchange = () => {
+      const leg = legs[parseInt($('legSelect').value, 10)];
+      const rs = (j.reaction_sets || [])[parseInt($('rxnSelect').value, 10)];
+      if (rs) applyImport(leg, rs.cases);
+    };
+    pick();
+  } catch (e) { $('xmlStatus').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
 };
 $('calcBtn').onclick = async () => {
   $('calcError').innerHTML = '';

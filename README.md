@@ -43,6 +43,60 @@ and anchor bolts and gives a YES/NO verdict per pole.
   (load-case tables, shaft capacities) were not extracted, so they
   are not recomputed — that is a data-extraction gap, not a pass.
 
+## PLS-POLE XML import
+
+Upload a PLS-POLE `.xml` export and the form is prefilled — nothing is
+calculated on upload. Review the values, then press Calculate.
+
+- **Endpoint:** `POST /api/import-xml` (login required), body is
+  `multipart/form-data` with the file in the field named `file`.
+  Example: `curl -b cookies.txt -F file=@pole.xml
+  http://127.0.0.1:8512/api/import-xml`. Files over 20 MB, files
+  without a `.xml` name, unparseable files, and files with no steel
+  pole properties or no base reactions are rejected with a plain
+  error message, never a crash.
+- **What is extracted, per pole/leg:** shape/sides (leading digits of
+  the PLS shape, e.g. `12F` → 12), base OD (base tube's bottom
+  diameter), base wall and yield (base tube = highest tube number),
+  shaft moment capacity (see below), bolt diameter and plate yield
+  from the model's existing base plate, if it has one, and the full
+  load-case table from the base support reactions.
+- **Load-case mapping** (forces in kips, moments in ft-k, PLS-POLE
+  convention): case name = the reaction table's load case description;
+  axial = −z_force (compression positive); shear =
+  hypot(x_force, y_force); mx = x_moment, my = y_moment,
+  torsion = z_moment; strength factor =
+  `sf_for_steel_poles_tubular_arms_and_towers` for that case.
+  Cases named INSULATOR are carried at SF 0, matching the STR017
+  sheet (both insulator cases there have SF 0); deflection cases keep
+  their PLS strength factor.
+- **Shaft moment capacity:** the median over cases of
+  hypot(trans_mom, long_mom) / (m_s / 100) at the base joint in the
+  detailed steel pole usages table. m_s is the bending-only usage,
+  so the ratio is the section moment capacity and is
+  case-independent (verified: ~4205 ft-k for the 002 sample,
+  ~4964 ft-k for 013). If the file has no usable base usage rows,
+  the capacity is left for the user to enter — it sets the 50%
+  floor, so check it before calculating.
+- **Multi-leg files:** legs are matched to their base reactions by
+  the base joint label (`<pole_label>:g`, via the connectivity
+  table). The UI shows a pole picker; if a leg cannot be matched
+  unambiguously, it also shows a reaction-set picker and the user
+  must choose — a leg is never silently paired with the wrong
+  reactions. A 3-pole file therefore designs one leg at a time,
+  chosen by the user.
+- **Not taken from the XML (left at their current form values):**
+  bolt grade, bolt yield/Fu, tensile/gross areas, nut width, hole
+  diameter, bolt-at-0°, plate edge/minimum thickness, and template
+  weights. The model's existing plate diameter, thickness, bolt
+  circle, and bolt count are shown for comparison only and are
+  never applied as overrides, so the app designs fresh unless the
+  user sets an override. Plate shape is only mapped when the PLS
+  value is `0` (→ Round); other values are left unchanged.
+- **Units assumption:** PLS-POLE exports do not label units on the
+  reaction rows used here; kips and ft-k are assumed per PLS-POLE
+  convention and are consistent with the STR017 sheet's case table.
+
 ## Not yet covered
 
 - **EBC / IBC second bolt circle:** single-bolt-circle (SBC) sheets
@@ -137,8 +191,10 @@ touching other keys.
 
 - `server.py` — HTTP server, password gate, API routes
   (`/api/state`, `/api/login`, `/api/setup`, `/api/calculate`,
-  `/api/validation`, `/api/sample/str017`).
+  `/api/validation`, `/api/sample/str017`, `/api/import-xml`).
 - `tapp_calc.py` — the calculation engine (pure stdlib, no I/O).
+- `xml_import.py` — PLS-POLE XML parsing (stdlib xml.etree only);
+  maps an export onto the app's input fields, per leg.
 - `static/index.html` — input form, results with visible formulas,
   per-case table, checks table, validation panel.
 - `static/login.html`, `static/setup.html` — gate pages.

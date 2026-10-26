@@ -25,6 +25,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import tapp_calc
+import xml_import
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
@@ -209,6 +210,44 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return {}
 
+    def read_multipart_file(self):
+        """Return (filename, bytes) for the form field named 'file'.
+
+        Small hand-rolled parser: no new dependencies, and it never
+        writes the upload to disk. Raises ValueError on bad input.
+        """
+        ctype = self.headers.get("Content-Type", "")
+        m = re.search(r'boundary=(?:"([^"]+)"|([^;]+))', ctype)
+        if not m:
+            raise ValueError("expected a multipart file upload")
+        boundary = ("--" + (m.group(1) or m.group(2)).strip()).encode()
+        length = int(self.headers.get("Content-Length", 0))
+        if not length:
+            raise ValueError("empty upload: no file received")
+        body = self.rfile.read(length)
+        parts = body.split(boundary)
+        for part in parts:
+            if b'name="file"' not in part:
+                continue
+            head, _, payload = part.partition(b"\r\n\r\n")
+            if not payload:
+                continue
+            fm = re.search(br'filename="([^"]*)"', head)
+            filename = (fm.group(1).decode("utf-8", "replace")
+                        if fm else "")
+            # Strip the trailing CRLF that precedes the next boundary.
+            if payload.endswith(b"\r\n"):
+                payload = payload[:-2]
+            if not filename:
+                raise ValueError("no file selected for upload")
+            if not filename.lower().endswith(".xml"):
+                raise ValueError(
+                    "expected a .xml file, got '%s'" % filename)
+            if not payload.strip():
+                raise ValueError("uploaded file '%s' is empty" % filename)
+            return filename, payload
+        raise ValueError("no file part found in the upload")
+
     def authed(self):
         cfg = load_config()
         if not cfg.get("password_hash"):
@@ -287,6 +326,17 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({"ok": True})
         if not self.require_auth():
             return
+        if path == "/api/import-xml":
+            try:
+                filename, data = self.read_multipart_file()
+                result = xml_import.parse_pls_xml(data)
+                result["file_name"] = filename
+                return self.send_json(result)
+            except ValueError as e:
+                return self.send_json({"error": str(e)}, 400)
+            except Exception as e:
+                return self.send_json(
+                    {"error": "could not import XML: " + str(e)}, 400)
         if path == "/api/calculate":
             try:
                 body = self.read_json()
