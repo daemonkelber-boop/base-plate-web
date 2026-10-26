@@ -149,14 +149,20 @@ and restarts the app when code changed. Local edits to tracked files
 block a pull; `data/config.json` (the password hash) and `logs/` are
 git-ignored and are never touched by a pull.
 
+Note: you may clone the repo anywhere (e.g.
+`~/Documents/Projects/base-plate-web`). `install-mini-services.sh`
+writes that actual folder into the launchd jobs — do not hand-edit
+the plist templates, and re-run the install script if you ever move
+the folder, or launchd will keep pointing at the old location.
+
 - **Sharing:** `tailscale funnel --bg 8512` on the mini (verify Funnel
   is allowed on the tailnet), then share the Funnel link. Anyone on
   the internet can reach the login page; the password gate is the
   protection.
 - **Later code changes:** push to GitHub and the mini picks them up
   within ~5 minutes. To pull immediately: `./scripts/update-from-github.sh`
-- **Logs on the mini:** `~/base-plate-web/logs/app.log` and
-  `~/base-plate-web/logs/update.log`
+- **Logs on the mini:** `<repo-folder>/logs/app.log` and
+  `<repo-folder>/logs/update.log`
 
 The server binds **127.0.0.1:8512** (override with `TAPP_PORT`).
 It is meant to be shared via **Tailscale Funnel**: Funnel

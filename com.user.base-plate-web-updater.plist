@@ -7,10 +7,10 @@
   (fast-forward only), syntax-checks it (rolling back on failure), and
   restarts the app via launchd if the app service is loaded. When nothing
   changed on GitHub it exits quietly. Log:
-  /Users/YOURNAME/base-plate-web/logs/update.log
+  __PROJECT_DIR__/logs/update.log
 
   Install (or let scripts/install-mini-services.sh do it for you):
-    1. Replace every YOURNAME below with your Mac username.
+    1. Let scripts/install-mini-services.sh fill in __PROJECT_DIR__ (see above).
     2. cp com.user.base-plate-web-updater.plist ~/Library/LaunchAgents/
     3. launchctl load ~/Library/LaunchAgents/com.user.base-plate-web-updater.plist
 
@@ -25,11 +25,11 @@
 	<key>ProgramArguments</key>
 	<array>
 		<string>/bin/bash</string>
-		<string>/Users/YOURNAME/base-plate-web/scripts/update-from-github.sh</string>
+		<string>__PROJECT_DIR__/scripts/update-from-github.sh</string>
 	</array>
 
 	<key>WorkingDirectory</key>
-	<string>/Users/YOURNAME/base-plate-web</string>
+	<string>__PROJECT_DIR__</string>
 
 	<key>RunAtLoad</key>
 	<true/>
@@ -44,9 +44,9 @@
 	</dict>
 
 	<key>StandardOutPath</key>
-	<string>/Users/YOURNAME/base-plate-web/logs/updater.log</string>
+	<string>__PROJECT_DIR__/logs/updater.log</string>
 
 	<key>StandardErrorPath</key>
-	<string>/Users/YOURNAME/base-plate-web/logs/updater-error.log</string>
+	<string>__PROJECT_DIR__/logs/updater-error.log</string>
 </dict>
 </plist>

@@ -8,9 +8,11 @@
 #                                       code from GitHub and restarts
 #                                       the app when code changed
 #
-# It fills your username into both plist templates, copies them to
-# ~/Library/LaunchAgents, and (re)loads them. Safe to re-run — e.g.
-# after a plist template changes in the repo.
+# It fills this repo's actual folder path into both plist templates
+# (so launchd points at wherever you actually cloned the repo, not a
+# hardcoded ~/base-plate-web), copies them to ~/Library/LaunchAgents,
+# and (re)loads them. Safe to re-run — e.g. after a plist template
+# changes in the repo, or after moving the repo folder.
 #
 # BEFORE running this: stop any app copy running manually in a Terminal
 # (Ctrl+C in its window), or two servers will fight over port 8512.
@@ -20,7 +22,6 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
 cd "$(dirname "$0")/.."
 PROJECT="$(pwd)"
-ME="$(whoami)"
 AGENTS_DIR="$HOME/Library/LaunchAgents"
 
 if [ ! -d "$PROJECT/.git" ]; then
@@ -34,7 +35,13 @@ chmod +x "$PROJECT/scripts/update-from-github.sh" "$PROJECT/scripts/install-mini
 install_one() {
   local template="$1" label="$2"
   local dest="$AGENTS_DIR/$label.plist"
-  sed "s/YOURNAME/$ME/g" "$PROJECT/$template" > "$dest"
+  # | delimiter so a path containing / works; the repo path has no |
+  # in practice. This is what makes a moved repo folder work.
+  sed "s|__PROJECT_DIR__|$PROJECT|g" "$PROJECT/$template" > "$dest"
+  if grep -q "__PROJECT_DIR__" "$dest"; then
+    echo "ERROR: $template still contains an unfilled __PROJECT_DIR__ placeholder — not installing $label."
+    exit 2
+  fi
   echo "Installed $dest"
   launchctl unload "$dest" 2>/dev/null || true
   launchctl load "$dest"
