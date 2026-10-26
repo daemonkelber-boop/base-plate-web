@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Set the TAPP Base Plate app password (deploy-time helper).
+"""Set the Base Plate app password (deploy-time helper).
 
 Reads the password via getpass (never as a CLI argument, never echoed)
 and writes ONLY the PBKDF2-HMAC-SHA256 hash + salt to data/config.json.

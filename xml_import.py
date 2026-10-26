@@ -1,4 +1,4 @@
-"""PLS-POLE XML import for the TAPP Base Plate web app.
+"""PLS-POLE XML import for the Base Plate web app.
 
 Pure standard library (xml.etree). Reads a PLS-POLE XML export
 (read-only) and returns, per pole/leg, the values the app's input form

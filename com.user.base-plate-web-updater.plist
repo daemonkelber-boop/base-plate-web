@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  launchd template: auto-update the TAPP Base Plate web app on the Mac mini.
+  launchd template: auto-update the Base Plate web app on the Mac mini.
 
   Every 5 minutes this runs scripts/update-from-github.sh, which pulls
   the latest code from the private GitHub repo base-plate-web

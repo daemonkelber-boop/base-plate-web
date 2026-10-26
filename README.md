@@ -1,7 +1,7 @@
-# TAPP Base Plate — Web Calculator
+# Base Plate — Web Calculator
 
 A zero-dependency web app (Python standard library only, no pip installs,
-no build step) that replicates the TAPP Base Plate V2.01 Excel
+no build step) that replicates the Base Plate Excel
 calculations: given a pole's base loads, it designs/checks the base plate
 and anchor bolts and gives a YES/NO verdict per pole.
 
@@ -14,14 +14,14 @@ and anchor bolts and gives a YES/NO verdict per pole.
   yield, edge allowance, minimum thickness, optional thickness override),
   strength factors, and an editable load-case table (axial, shear,
   transverse/longitudinal moment, torsion, PLS strength factor per case).
-- **Engine** (`tapp_calc.py`, separate from the server): bolt-circle
+- **Engine** (`base_plate_calc.py`, separate from the server): bolt-circle
   sizing rules, bolt positions, elastic bolt-group force distribution,
   governing case plus the 50% shaft-capacity floor, bend-line effective
   width, governing required thickness rounded up to 0.25 in and floored
   at 1.5 in, per-case usage = (t_min_case / t_use)² zeroed when the
   strength factor is 0, the Valid/Error check block, and weights.
-  Where the Basis document flags a TAPP-specific rule vs ASCE 48-19,
-  the app follows TAPP.
+  Where the Basis document flags a workbook-specific rule vs ASCE 48-19,
+  the app follows the workbook.
 - **A572-42 thick-plate rule (user rule, not the Excel sheet's):**
   when the "Use A572-42 for plates over 4 in" box is on (the
   default), and the calculated thickness is over 4 in, the design
@@ -182,7 +182,7 @@ the folder, or launchd will keep pointing at the old location.
 - **Logs on the mini:** `<repo-folder>/logs/app.log` and
   `<repo-folder>/logs/update.log`
 
-The server binds **127.0.0.1:8512** (override with `TAPP_PORT`).
+The server binds **127.0.0.1:8512** (override with `BASE_PLATE_PORT`).
 It is meant to be shared via **Tailscale Funnel**: Funnel
 terminates TLS and proxies to this local port, so the app needs no
 LAN exposure. Example (on the host running the app):
@@ -216,7 +216,7 @@ touching other keys.
 - `server.py` — HTTP server, password gate, API routes
   (`/api/state`, `/api/login`, `/api/setup`, `/api/calculate`,
   `/api/validation`, `/api/sample/str017`, `/api/import-xml`).
-- `tapp_calc.py` — the calculation engine (pure stdlib, no I/O).
+- `base_plate_calc.py` — the calculation engine (pure stdlib, no I/O).
 - `xml_import.py` — PLS-POLE XML parsing (stdlib xml.etree only);
   maps an export onto the app's input fields, per leg.
 - `static/index.html` — input form, results with visible formulas,

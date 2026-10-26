@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""TAPP Base Plate web app — replicates the TAPP Base Plate V2.01 Excel
+"""Base Plate web app — replicates the Base Plate Excel
 calculations with every formula shown and explained.
 
 Zero-dependency: Python standard library only. Run:
@@ -24,14 +24,14 @@ import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import tapp_calc
+import base_plate_calc
 import xml_import
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_DIR, "static")
 DATA_DIR = os.path.join(APP_DIR, "data")
 CONFIG_PATH = os.path.join(DATA_DIR, "config.json")
-PORT = int(os.environ.get("TAPP_PORT", "8512"))
+PORT = int(os.environ.get("BASE_PLATE_PORT", "8512"))
 HOST = "127.0.0.1"
 
 SESSIONS = set()
@@ -91,8 +91,8 @@ def run_validation():
         entry = {"key": key, "label": ds.get("label", key)}
         if "inputs" in ds and "expected" in ds:
             # full recompute
-            summary, _steps, case_rows = tapp_calc.compute(
-                tapp_calc.clean_inputs(ds["inputs"]))
+            summary, _steps, case_rows = base_plate_calc.compute(
+                base_plate_calc.clean_inputs(ds["inputs"]))
             exp = ds["expected"]
             checks = []
             mapping = [
@@ -170,7 +170,7 @@ class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
     def log_message(self, fmt, *args):
-        sys.stderr.write("[tapp] " + (fmt % args) + "\n")
+        sys.stderr.write("[base-plate] " + (fmt % args) + "\n")
 
     # -- plumbing
     def send_json(self, obj, status=200):
@@ -253,7 +253,7 @@ class Handler(BaseHTTPRequestHandler):
         if not cfg.get("password_hash"):
             return False
         cookie = self.headers.get("Cookie", "")
-        m = re.search(r"tapp_session=([a-f0-9]+)", cookie)
+        m = re.search(r"base_plate_session=([a-f0-9]+)", cookie)
         return bool(m and m.group(1) in SESSIONS)
 
     def require_auth(self):
@@ -304,7 +304,7 @@ class Handler(BaseHTTPRequestHandler):
                 out = json.dumps({"ok": True}).encode()
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
-                self.send_header("Set-Cookie", "tapp_session=" + token +
+                self.send_header("Set-Cookie", "base_plate_session=" + token +
                                  "; Path=/; HttpOnly; SameSite=Lax")
                 self.send_header("Content-Length", str(len(out)))
                 self.end_headers()
@@ -340,8 +340,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/calculate":
             try:
                 body = self.read_json()
-                summary, steps, case_rows = tapp_calc.compute(
-                    tapp_calc.clean_inputs(body))
+                summary, steps, case_rows = base_plate_calc.compute(
+                    base_plate_calc.clean_inputs(body))
                 return self.send_json({"summary": summary, "steps": steps,
                                        "cases": case_rows})
             except Exception as e:
@@ -352,7 +352,7 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     os.makedirs(DATA_DIR, exist_ok=True)
     srv = ThreadingHTTPServer((HOST, PORT), Handler)
-    print("TAPP Base Plate app running at http://%s:%d" % (HOST, PORT), flush=True)
+    print("Base Plate app running at http://%s:%d" % (HOST, PORT), flush=True)
     print("Share via Tailscale Funnel pointing at this local port.", flush=True)
     print("Data folder: " + DATA_DIR, flush=True)
     try:

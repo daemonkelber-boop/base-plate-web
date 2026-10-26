@@ -1,7 +1,7 @@
-"""TAPP Base Plate V2.01 calculation engine (pure stdlib, no I/O).
+"""Base Plate calculation engine (pure stdlib, no I/O).
 
 Reproduces the Drive workbook's per-structure sheet chain, as documented
-in TAPP_Basis_of_Design_from_Scratch.md and verified against the STR017
+in the Basis of Design document and verified against the STR017
 sheet's cached values. Every step returns its formula, a plain-language
 explanation, its inputs and its result, so the web UI can show the work.
 
@@ -196,7 +196,7 @@ def ffa(angle_deg):
 
 
 def bolt_circle_calc(p, n, first_quadrant_angles):
-    """Sheet MinBC_Tapp = MAX(BZ branch, AD branch). Returns steps."""
+    """Sheet MinBC = MAX(BZ branch, AD branch). Returns steps."""
     steps = []
     od, t, d = p["base_od"], p["wall"], p["bolt_dia"]
     max_poledia = od + 0.5 if t >= 0.5 else od + 0.25
@@ -279,8 +279,8 @@ def compute(p):
 
     # ---- shaft capacity floor -------------------------------------------
     floor_moment = p["shaft_capacity_perc"] * p["shaft_capacity_ftk"]
-    tapp_est_full = 0.411 * (od - t) ** 3 * t * fy_pole / (od / 2.0) / 12.0
-    tapp_est = p["shaft_capacity_perc"] * tapp_est_full
+    shaft_est_full = 0.411 * (od - t) ** 3 * t * fy_pole / (od / 2.0) / 12.0
+    shaft_est = p["shaft_capacity_perc"] * shaft_est_full
     steps.append({"step": "50% shaft-capacity floor (applied)",
                   "formula": "Floor = percentage x PLS shaft moment capacity",
                   "explain": "The plate is never sized for less than half the shaft's own "
@@ -290,14 +290,14 @@ def compute(p):
                   "inputs": {"PLS shaft capacity": p["shaft_capacity_ftk"],
                              "percentage": p["shaft_capacity_perc"]},
                   "result": floor_moment, "unit": "ft-k"})
-    steps.append({"step": "TAPP 0.411 estimate (reference only)",
+    steps.append({"step": "0.411 shaft-capacity estimate (reference only)",
                   "formula": "0.411 x (OD - wall)^3 x wall x pole_yield / (OD/2) / 12, "
                              "then x percentage",
-                  "explain": "TAPP's own closed-form estimate of the shaft capacity, shown "
+                  "explain": "A closed-form estimate of the shaft capacity, shown "
                              "on the sheet (cell O48). The sheet displays it but applies "
                              "the PLS-based floor above for the case moments.",
                   "inputs": {"OD": od, "wall": t, "pole yield": fy_pole},
-                  "result": tapp_est, "unit": "ft-k"})
+                  "result": shaft_est, "unit": "ft-k"})
 
     # ---- bolt quantity (RODS) -------------------------------------------
     cases = p["cases"]
@@ -674,8 +674,8 @@ def compute(p):
                              "scales the governing thickness by how hard each case pulls "
                              "its worst bolt. Because stress goes as thickness squared, "
                              "usage is the squared thickness ratio. Cases with strength "
-                             "factor 0 (insulator, deflection) report zero by TAPP's "
-                             "reporting choice.",
+                             "factor 0 (insulator, deflection) report zero by the "
+                             "sheet's reporting choice.",
                   "inputs": {"governing max bolt force": round(gov_bolt, 3),
                              "t_req": round(t_req, 4), "t_use": t_use},
                   "result": bp_usage, "unit": "ratio"})
@@ -860,7 +860,7 @@ def compute(p):
         "t_req": t_req, "bend_line_width": bl_width,
         "bend_line_moments": bl_moments, "governing_moment": m_gov,
         "governing_case": gov_name, "floor_moment": floor_moment,
-        "tapp_floor_estimate": tapp_est,
+        "shaft_floor_estimate": shaft_est,
         "max_rod_force": max_force_all, "rod_capacity": rod_cap,
         "ab_usage": ab_usage, "bp_usage": bp_usage,
         "overall": overall, "checks": checks, "weights": weights,

@@ -18,7 +18,7 @@ cd "$(dirname "$0")" || {
   exit 1
 }
 
-PORT="${TAPP_PORT:-8512}"
+PORT="${BASE_PLATE_PORT:-8512}"
 URL="http://127.0.0.1:${PORT}"
 
 open_app() {
