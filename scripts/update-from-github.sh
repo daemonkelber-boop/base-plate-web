@@ -74,7 +74,7 @@ fi
 PY="$(command -v python3 || true)"
 fail=0
 if [ -n "$PY" ]; then
-  for f in server.py base_plate_calc.py set_password.py; do
+  for f in server.py base_plate_calc.py eval_db.py xml_import.py set_password.py; do
     [ -e "$f" ] || continue
     if ! "$PY" -m py_compile "$f" >>"$LOG" 2>&1; then
       log "ERROR: syntax check failed on $f"

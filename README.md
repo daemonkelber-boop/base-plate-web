@@ -115,6 +115,50 @@ way. The Calculate button remains for after manual edits.
   reaction rows used here; kips and ft-k are assumed per PLS-POLE
   convention and are consistent with the STR017 sheet's case table.
 
+## Development evaluation log (XML uploads only)
+
+For development/testing, every calculation that follows an XML
+upload is recorded in a SQLite database on the machine running the
+app — so a later test session can see which files were tested, what
+inputs were evaluated, and what results came out.
+
+- **Location:** `data/evaluations.db` (next to `data/config.json`).
+  `data/` is git-ignored: the log is never committed, never pushed
+  to GitHub, and never touched by a pull. Delete the file to start
+  the log over. The summary bar shows "Logged as development
+  evaluation #N" for each logged calculation.
+- **What is logged, per calculation:** file name, size, and SHA-256
+  hash; pole/leg label and reaction-set label; pole geometry and
+  shaft capacity; bolt and plate actually used (including whether
+  the A572-42 thick-plate rule applied); bolt circle, plate width /
+  ID / thickness, required thickness, governing case, max rod
+  force, rod capacity, AB/BP usage, and overall verdict — plus one
+  row per load case (forces, moments, max bolt force, t_min, usage)
+  and the full cleaned inputs and summary as JSON, so any logged
+  calculation can be re-run exactly.
+- **What is NOT logged:** manual calculations, the STR017 sample,
+  and validation runs. Changing the pole/leg or reaction-set picker
+  after an upload counts as a new upload-triggered calculation and
+  is logged separately. A calculation that fails is logged with its
+  error message instead of results.
+- **Viewing it:** the app has a "Development — logged XML
+  evaluations" section (list + per-evaluation case table), and
+  login-protected APIs `GET /api/evaluations` (newest first) and
+  `GET /api/evaluations/<id>`. Or query the file directly on the
+  machine running the app:
+
+```sh
+sqlite3 data/evaluations.db
+SELECT overall, COUNT(*) FROM evaluations GROUP BY overall;
+SELECT file_name, leg_label, plate_thick_use, bp_usage
+  FROM evaluations WHERE bp_usage > 1 ORDER BY bp_usage DESC;
+SELECT case_name, AVG(usage) FROM evaluation_cases GROUP BY case_name;
+```
+
+- **Safety:** logging can never break a calculation — if the
+  database write fails, the error goes to stderr and the result is
+  still returned.
+
 ## Not yet covered
 
 - **EBC / IBC second bolt circle:** single-bolt-circle (SBC) sheets
@@ -215,7 +259,10 @@ touching other keys.
 
 - `server.py` — HTTP server, password gate, API routes
   (`/api/state`, `/api/login`, `/api/setup`, `/api/calculate`,
-  `/api/validation`, `/api/sample/str017`, `/api/import-xml`).
+  `/api/validation`, `/api/sample/str017`, `/api/import-xml`,
+  `/api/evaluations`, `/api/evaluations/<id>`).
+- `eval_db.py` — development evaluation log (SQLite, stdlib only);
+  see "Development evaluation log" above.
 - `base_plate_calc.py` — the calculation engine (pure stdlib, no I/O).
 - `xml_import.py` — PLS-POLE XML parsing (stdlib xml.etree only);
   maps an export onto the app's input fields, per leg.

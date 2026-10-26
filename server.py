@@ -25,6 +25,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import base_plate_calc
+import eval_db
 import xml_import
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -287,6 +288,25 @@ class Handler(BaseHTTPRequestHandler):
                 return
             ds = load_validation().get("str017", {})
             return self.send_json({"inputs": ds.get("inputs", {})})
+        if path == "/api/evaluations":
+            if not self.require_auth():
+                return
+            try:
+                return self.send_json(
+                    {"evaluations": eval_db.list_evaluations(DATA_DIR)})
+            except Exception as e:
+                return self.send_json({"error": str(e)}, 500)
+        if path.startswith("/api/evaluations/"):
+            if not self.require_auth():
+                return
+            try:
+                rec = eval_db.get_evaluation(
+                    DATA_DIR, path.rsplit("/", 1)[-1])
+            except Exception as e:
+                return self.send_json({"error": str(e)}, 400)
+            if rec is None:
+                return self.send_json({"error": "evaluation not found"}, 404)
+            return self.send_json(rec)
         return self.send_json({"error": "not found"}, 404)
 
     def do_POST(self):
@@ -331,6 +351,8 @@ class Handler(BaseHTTPRequestHandler):
                 filename, data = self.read_multipart_file()
                 result = xml_import.parse_pls_xml(data)
                 result["file_name"] = filename
+                result["file_size"] = len(data)
+                result["file_sha256"] = hashlib.sha256(data).hexdigest()
                 return self.send_json(result)
             except ValueError as e:
                 return self.send_json({"error": str(e)}, 400)
@@ -338,13 +360,36 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(
                     {"error": "could not import XML: " + str(e)}, 400)
         if path == "/api/calculate":
+            body = self.read_json()
+            ctx = body.get("upload_context") if isinstance(body, dict) else None
+            if not isinstance(ctx, dict):
+                ctx = None
+            cleaned = None
             try:
-                body = self.read_json()
-                summary, steps, case_rows = base_plate_calc.compute(
-                    base_plate_calc.clean_inputs(body))
+                cleaned = base_plate_calc.clean_inputs(body)
+                summary, steps, case_rows = base_plate_calc.compute(cleaned)
+                eval_id = None
+                if ctx is not None:
+                    # Development log only; a DB failure must never
+                    # break the calculation the user asked for.
+                    try:
+                        eval_id = eval_db.log_evaluation(
+                            DATA_DIR, ctx, cleaned, summary, case_rows)
+                    except Exception as e:
+                        sys.stderr.write(
+                            "[base-plate] evaluation log failed: %s\n" % e)
                 return self.send_json({"summary": summary, "steps": steps,
-                                       "cases": case_rows})
+                                       "cases": case_rows,
+                                       "evaluation_id": eval_id})
             except Exception as e:
+                if ctx is not None:
+                    try:
+                        eval_db.log_evaluation(
+                            DATA_DIR, ctx, cleaned, None, None,
+                            error=str(e))
+                    except Exception as log_e:
+                        sys.stderr.write(
+                            "[base-plate] evaluation log failed: %s\n" % log_e)
                 return self.send_json({"error": str(e)}, 500)
         return self.send_json({"error": "not found"}, 404)
 

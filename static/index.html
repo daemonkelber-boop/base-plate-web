@@ -192,6 +192,13 @@
   <p class="note">Tolerance: 0.5% relative. Mismatches are listed honestly — nothing is fudged. "Reference" samples show the workbook's cached values; their full input sets were not extracted, so they are not recomputed.</p>
   <div id="validationBody"></div>
 </section>
+<section>
+  <h2 class="sec">Development — logged XML evaluations</h2>
+  <p class="note">Every calculation that follows an XML upload is logged (inputs + results) for later test sessions. Manual calculations, the sample, and validation runs are not logged. The log lives only on this machine in <code>data/evaluations.db</code> — it is never uploaded to GitHub.</p>
+  <p><button class="small" id="loadEvals">Show logged evaluations</button></p>
+  <div id="evalList"></div>
+  <div id="evalDetail"></div>
+</section>
 <p class="note">Yellow cells = type here. Grey cells = calculated, read-only. The header fields (Quote / Customer / Project / Item) are labels only and are not sent to the calculation.</p>
 </div>
 <script>
@@ -334,9 +341,19 @@ function legNote(leg, ep) {
   bits.push('Bolt grade, areas, hole diameter, and plate edge/minimum thickness are not in the XML and were left at their current values.');
   return bits.join('<br>');
 }
-function applyImport(leg, cases) {
+let uploadContext = null;
+function applyImport(leg, cases, reactionLabel) {
   const ep = applyLeg(leg);
   fillCases(cases || []);
+  // This calculation is upload-triggered, so the server logs it in
+  // the development evaluation database (file, leg, reaction set).
+  uploadContext = {
+    file_name: importedData ? importedData.file_name : null,
+    file_size: importedData ? importedData.file_size : null,
+    file_sha256: importedData ? importedData.file_sha256 : null,
+    leg_label: leg.label || null,
+    reaction_label: reactionLabel || null
+  };
   $('xmlStatus').innerHTML = `<p class="note">${legNote(leg, ep)}<br><b>${(cases || []).length} load cases prefilled — calculating the base plate design now.</b></p>`;
   // Upload (and any leg / reaction-set change) calculates automatically:
   // no separate Calculate press is needed after an upload.
@@ -366,7 +383,7 @@ $('uploadXml').onclick = async () => {
         $('rxnWrap').style.display = '';
         $('rxnSelect').innerHTML = (j.reaction_sets || []).map((s, i) => `<option value="${i}">${esc(s.joint_label)} (${s.cases.length} cases)</option>`).join('');
         const rs = (j.reaction_sets || [])[0];
-        if (rs) applyImport(leg, rs.cases);
+        if (rs) applyImport(leg, rs.cases, rs.joint_label);
         else $('xmlStatus').innerHTML = '<div class="err">No reaction set could be matched to this pole. Pick a different leg or check the file.</div>';
       }
     };
@@ -374,7 +391,7 @@ $('uploadXml').onclick = async () => {
     $('rxnSelect').onchange = () => {
       const leg = legs[parseInt($('legSelect').value, 10)];
       const rs = (j.reaction_sets || [])[parseInt($('rxnSelect').value, 10)];
-      if (rs) applyImport(leg, rs.cases);
+      if (rs) applyImport(leg, rs.cases, rs.joint_label);
     };
     pick();
   } catch (e) { $('xmlStatus').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
@@ -382,9 +399,17 @@ $('uploadXml').onclick = async () => {
 function setCalc(id, v) { const el = $(id); if (el) el.textContent = fmt(v); }
 $('calcBtn').onclick = async () => {
   $('calcError').innerHTML = '';
+  const ctx = uploadContext;
   try {
-    const j = await api('/api/calculate', gather());
+    const body = gather();
+    if (ctx) body.upload_context = ctx;
+    const j = await api('/api/calculate', body);
+    // A successful upload-triggered calculation is logged; clear the
+    // context so later manual recalculations are not logged as uploads.
+    // On failure the context is kept, so a fixed recalculation still logs.
+    if (ctx) uploadContext = null;
     const s = j.summary;
+    const evalNote = j.evaluation_id != null ? ` &nbsp;|&nbsp; Logged as development evaluation #${j.evaluation_id}` : '';
     $('results').style.display = '';
     setCalc('calc_ab_usage', s.ab_usage); setCalc('calc_bp_usage', s.bp_usage);
     setCalc('calc_bolt_qty_calc', s.bolt_qty_calc); setCalc('calc_bolt_qty_use', s.bolt_qty_use);
@@ -408,7 +433,7 @@ $('calcBtn').onclick = async () => {
       gradeNote = ' &nbsp;|&nbsp; <b>Switched to A572-42 (42 ksi): calculated thickness was over 4 in — see the calculation step.</b>';
     }
     $('summarySentence').style.display = '';
-    $('summarySentence').innerHTML = `<b>Summary:</b> Base Plate — ${fmt(s.plate_thick_use)} in Thick, ${esc($('plate_shape').value)} Plate ${fmt(s.plate_width)} in O.D. — (${s.bolt_qty_use}) - ${esc($('bolt_grade').value)} Anchor Bolts on ${fmt(s.bolt_circle_use)}" BCD — Overall: <b>${esc(s.overall)}</b> &nbsp;|&nbsp; Governing case: ${esc(s.governing_case)}${gradeNote}`;
+    $('summarySentence').innerHTML = `<b>Summary:</b> Base Plate — ${fmt(s.plate_thick_use)} in Thick, ${esc($('plate_shape').value)} Plate ${fmt(s.plate_width)} in O.D. — (${s.bolt_qty_use}) - ${esc($('bolt_grade').value)} Anchor Bolts on ${fmt(s.bolt_circle_use)}" BCD — Overall: <b>${esc(s.overall)}</b> &nbsp;|&nbsp; Governing case: ${esc(s.governing_case)}${gradeNote}${evalNote}`;
     $('summaryCards').innerHTML = [
       ['Overall', s.overall], ['AB usage', fmt(s.ab_usage)], ['BP usage', fmt(s.bp_usage)],
       ['Plate thickness used (in)', fmt(s.plate_thick_use)],
@@ -464,6 +489,27 @@ $('runValidation').onclick = async () => {
     }).join('');
     $('validation').scrollIntoView();
   } catch (e) { alert('Validation failed: ' + e.message); }
+};
+$('loadEvals').onclick = async () => {
+  try {
+    const j = await api('/api/evaluations');
+    const rows = j.evaluations || [];
+    if (!rows.length) { $('evalList').innerHTML = '<p class="note">No XML evaluations logged yet. Upload an XML file and one will appear here.</p>'; return; }
+    $('evalList').innerHTML = `<table class="data"><thead><tr><th>#</th><th>When (UTC)</th><th>File</th><th>Leg</th><th>Pole</th><th>Plate</th><th>AB / BP usage</th><th>Overall</th><th></th></tr></thead><tbody>` +
+      rows.map(e => `<tr><td>${e.id}</td><td>${esc(e.created_at)}</td><td>${esc(e.file_name)}</td><td>${esc(e.leg_label)}</td><td>${fmt(e.sides)} sides, ${fmt(e.base_od)} in</td><td>${fmt(e.plate_thick_use)} in, ${esc(e.plate_grade_used)}</td><td>${fmt(e.ab_usage)} / ${fmt(e.bp_usage)}</td><td class="${e.overall === 'OK' ? 'ok' : 'bad'}">${esc(e.overall)}${e.error ? ' — ' + esc(e.error) : ''}</td><td><button class="small" data-eval="${e.id}">View</button></td></tr>`).join('') + `</tbody></table>`;
+    document.querySelectorAll('[data-eval]').forEach(btn => {
+      btn.onclick = async () => {
+        const rec = await api('/api/evaluations/' + btn.dataset.eval);
+        const inp = rec.inputs || {};
+        $('evalDetail').innerHTML = `<h3>Evaluation #${rec.id} — ${esc(rec.file_name)} (${esc(rec.leg_label)})</h3>
+          <p class="note">SHA-256: <code>${esc(rec.file_sha256)}</code> &nbsp;|&nbsp; ${fmt(rec.file_size)} bytes &nbsp;|&nbsp; Governing case: ${esc(rec.governing_case)}</p>
+          <p>Inputs: ${fmt(inp.sides)} sides, base OD ${fmt(inp.base_od)} in, wall ${fmt(inp.wall)} in, pole yield ${fmt(inp.pole_yield)} ksi, shaft capacity ${fmt(inp.shaft_capacity_ftk)} ft-k, bolt dia ${fmt(inp.bolt_dia)} in, ${inp.cases ? inp.cases.length : 0} cases.</p>
+          <table class="data"><thead><tr><th>Case</th><th>Max force</th><th>t_min</th><th>Usage</th></tr></thead><tbody>` +
+          (rec.cases || []).map(c => `<tr><td>${esc(c.case_name)}</td><td>${fmt(c.max_force)}</td><td>${fmt(c.t_min)}</td><td><b>${fmt(c.usage)}</b></td></tr>`).join('') + `</tbody></table>`;
+        $('evalDetail').scrollIntoView();
+      };
+    });
+  } catch (e) { $('evalList').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
 };
 </script>
 </body>
