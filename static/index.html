@@ -5,135 +5,194 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TAPP Base Plate — Web Calculator</title>
 <style>
-  body{font-family:-apple-system,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#f4f5f7;color:#1c2733}
-  header{background:#16324f;color:#fff;padding:14px 20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  body{font-family:Calibri,Arial,sans-serif;margin:0;background:#d9d9d9;color:#000}
+  .sheet{max-width:1240px;margin:0 auto;background:#fff;border-left:1px solid #999;border-right:1px solid #999;padding:0 12px 20px}
+  header{background:#16324f;color:#fff;padding:12px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   header h1{font-size:19px;margin:0;flex:1}
   header button{background:#fff;color:#16324f;border:0;border-radius:6px;padding:8px 12px;cursor:pointer;font-weight:600}
-  main{max-width:1100px;margin:0 auto;padding:16px}
-  section{background:#fff;border:1px solid #dde3ea;border-radius:10px;padding:16px;margin-bottom:16px}
-  h2{font-size:17px;margin:0 0 12px} h3{font-size:15px;margin:18px 0 8px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
-  label{font-size:13px;color:#44546a;display:block}
-  label span{color:#16324f;font-weight:600}
-  input,select{width:100%;padding:8px;border:1px solid #c7d0da;border-radius:6px;font-size:15px;box-sizing:border-box}
-  button.primary{background:#16324f;color:#fff;border:0;border-radius:6px;padding:11px 18px;font-size:16px;cursor:pointer}
+  .meta{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:13px;margin:12px 0}
+  .meta label{color:#444}.meta input{width:100%;padding:5px;border:1px solid #bbb;box-sizing:border-box}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0;padding:10px;border:1px solid #999;background:#f7f7f7}
+  .toolbar .note{margin:0}
+  button{padding:8px 12px;border:1px solid #7a7a7a;background:#e7e7e7;cursor:pointer;font-size:14px}
+  button.primary{background:#16324f;color:#fff;border-color:#16324f;font-weight:700;padding:10px 18px;font-size:15px}
   button.small{background:#e8edf2;border:0;border-radius:6px;padding:6px 10px;cursor:pointer}
-  table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{border-bottom:1px solid #e6ebf0;padding:6px 8px;text-align:left;vertical-align:top}
-  th{background:#f0f3f6}
-  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
-  .card{border:1px solid #dde3ea;border-radius:8px;padding:10px;background:#fafbfc}
-  .card b{font-size:20px;display:block;color:#16324f}
-  .card span{font-size:12px;color:#55677d}
-  .step{border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:10px}
-  .step h4{margin:0 0 6px;font-size:14px}
+  .sheetgrid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;border:1px solid #999}
+  .panel{border-right:1px solid #bbb;min-width:0}
+  .panel:last-child{border-right:0}
+  .panel h2{font-size:14px;margin:0;padding:7px 8px;background:#16324f;color:#fff}
+  .panel table{width:100%;border-collapse:collapse;font-size:13px}
+  .panel td{border-bottom:1px solid #ddd;padding:5px 7px;vertical-align:top}
+  .panel td.val{width:96px;text-align:right}
+  input.num{width:92px;padding:4px;border:1px solid #bbb;text-align:right;box-sizing:border-box;background:#fff2cc;font-size:14px}
+  select{padding:4px;border:1px solid #bbb;background:#fff2cc;font-size:14px;max-width:96px}
+  input[type=file]{font-size:13px}
+  .calc{background:#f2f2f2;padding:4px 6px;display:inline-block;min-width:84px;text-align:right;box-sizing:border-box}
+  .summarybar{margin:12px 0;padding:10px;border:1px solid #999;background:#f7f7f7;font-size:14px}
+  .summarybar b{color:#0a7d33}
+  h2.sec{font-size:16px;margin:18px 0 8px}
+  table.data{width:100%;border-collapse:collapse;font-size:13px}
+  table.data th{background:#16324f;color:#fff;padding:6px 8px;text-align:left}
+  table.data td{border-bottom:1px solid #e6ebf0;padding:6px 8px;vertical-align:top}
+  #casesTable input{width:100%;padding:5px;font-size:13px;box-sizing:border-box}
+  #casesTable td{padding:4px}
+  .gov{background:#fff7d6}
+  .ok{color:#0a7d33;font-weight:700} .bad{color:#c0272d;font-weight:700}
+  .note{font-size:13px;color:#55677d}
+  .err{background:#fdecea;border:1px solid #f5c6c6;padding:10px;border-radius:8px;color:#7a1414}
+  details{margin-top:10px;font-size:13px}
+  details summary{cursor:pointer;font-weight:700;padding:6px 0}
+  details.step{border:1px solid #e2e8f0;border-radius:8px;padding:0 12px 10px;margin-bottom:10px}
+  details.step summary{font-size:14px}
   code{background:#f0f3f6;padding:2px 5px;border-radius:4px;font-size:12.5px;white-space:pre-wrap;word-break:break-word}
   .explain{font-size:13.5px;color:#33475e}
   .kv{font-size:12.5px;color:#55677d}
-  .ok{color:#0a7d33;font-weight:700} .bad{color:#c0272d;font-weight:700}
-  .gov{background:#fff7d6}
-  .note{font-size:13px;color:#55677d}
-  #casesTable input{width:100%;padding:5px;font-size:13px}
-  #casesTable td{padding:4px}
-  .err{background:#fdecea;border:1px solid #f5c6c6;padding:10px;border-radius:8px;color:#7a1414}
+  .cards{display:flex;flex-wrap:wrap;gap:8px}
+  .card{border:1px solid #dde3ea;border-radius:8px;padding:8px 10px;background:#fafbfc}
+  .card b{font-size:16px;display:block;color:#16324f}
+  .card span{font-size:12px;color:#55677d}
+  @media(max-width:900px){.sheetgrid{grid-template-columns:1fr 1fr}.meta{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
+<div class="sheet">
 <header>
   <h1>TAPP Base Plate V2.01 — Web Calculator</h1>
   <button id="loadSample">Load STR017 sample</button>
   <button id="runValidation">Run validation</button>
 </header>
-<main>
-<section>
-  <h2>Inputs</h2>
-  <h3>Import from PLS-POLE XML</h3>
-  <p class="note">Upload a PLS-POLE .xml export to prefill the form. Nothing is calculated on upload — review the values, then press Calculate.</p>
-  <p><input type="file" id="xmlFile" accept=".xml"> <button class="small" id="uploadXml">Upload XML</button></p>
-  <div id="xmlStatus"></div>
-  <div id="legPicker" style="display:none">
-    <label>Pole / leg <select id="legSelect"></select></label>
-    <label id="rxnWrap" style="display:none">Reaction set (base joint) <select id="rxnSelect"></select></label>
-  </div>
-  <h3>Pole geometry</h3>
-  <div class="grid">
-    <label>Sides <input id="sides" type="number" value="12"></label>
-    <label>Base OD (in) <input id="base_od" type="number" step="any" value="46.5"></label>
-    <label>Wall thickness (in) <input id="wall" type="number" step="any" value="0.3125"></label>
-    <label>Pole yield (ksi) <input id="pole_yield" type="number" step="any" value="65"></label>
-    <label>PLS shaft moment capacity (ft-k) <input id="shaft_capacity_ftk" type="number" step="any" value="2622.61"></label>
-    <label>Shaft capacity % (floor) <input id="shaft_capacity_perc" type="number" step="any" value="0.5"></label>
-  </div>
-  <h3>Anchor bolts</h3>
-  <div class="grid">
-    <label>Bolt diameter (in) <input id="bolt_dia" type="number" step="any" value="2.25"></label>
-    <label>Bolt grade <input id="bolt_grade" value='2.25"-18J'></label>
-    <label>Bolt yield (ksi) <input id="bolt_yield" type="number" step="any" value="75"></label>
-    <label>Bolt Fu (ksi) <input id="bolt_fu" type="number" step="any" value="100"></label>
-    <label>Tensile area As (in²) <input id="tensile_area" type="number" step="any" value="3.25"></label>
-    <label>Gross area Ag (in²) <input id="gross_area" type="number" step="any" value="3.9740625"></label>
-    <label>Nut width (in) <input id="nut_width" type="number" step="any" value="4.0625"></label>
-    <label>Hole diameter in plate (in) <input id="hole_dia" type="number" step="any" value="2.625"></label>
-    <label>Bolt at 0°?
-      <select id="bolt_at_0"><option value="yes" selected>Yes</option><option value="no">No</option></select></label>
-    <label>Bolt qty override (blank = calculated) <input id="bolt_qty_override" type="number" step="any"></label>
-    <label>Bolt circle override in (blank = calculated) <input id="bolt_circle_override" type="number" step="any"></label>
-  </div>
-  <h3>Base plate</h3>
-  <div class="grid">
-    <label>Plate shape
-      <select id="plate_shape"><option selected>Round</option><option>12-Sided</option><option>Square</option></select></label>
-    <label>Plate grade
-      <select id="plate_grade"><option selected>A572-60</option><option>A572-50</option><option>A36</option></select></label>
-    <label>Plate yield (ksi) <input id="plate_yield" type="number" step="any" value="60"></label>
-    <label>Edge allowance <input id="bp_edge" type="number" step="any" value="6"></label>
-    <label>Minimum thickness (in) <input id="min_thick" type="number" step="any" value="1.5"></label>
-    <label>Plate thickness override in (blank = calculated) <input id="plate_thick_override" type="number" step="any"></label>
-  </div>
-  <h3>Strength factors</h3>
-  <div class="grid">
-    <label>SF plate <input id="sf_plate" type="number" step="any" value="1"></label>
-    <label>SF bolt <input id="sf_bolt" type="number" step="any" value="1"></label>
-  </div>
-  <h3>Weights &amp; development length</h3>
-  <div class="grid">
-    <label>Rod weight (lb/ft) <input id="rod_w_lbft" type="number" step="any" value="14.63"></label>
-    <label>Template count <input id="template_count" type="number" value="2"></label>
-    <label>Template weight 1 (lb) <input id="template_w1" type="number" step="any" value="4.38"></label>
-    <label>Template weight 2 (lb) <input id="template_w2" type="number" step="any" value="0.89"></label>
-    <label>Template thickness 1 (in) <input id="template_t1" type="number" step="any" value="0.375"></label>
-    <label>Template thickness 2 (in) <input id="template_t2" type="number" step="any" value="0.375"></label>
-    <label>Template ID drop (in) <input id="template_id_drop" type="number" step="any" value="12"></label>
-    <label>Concrete f'c (ksi) <input id="fc_ksi" type="number" step="any" value="3"></label>
-    <label>Rod projection (in) <input id="projection_in" type="number" step="any" value="12"></label>
-  </div>
-  <h3>Load cases <button class="small" id="addCase">+ Add case</button></h3>
-  <p class="note">Moments in ft-k, forces in kips. A case whose raw resultant moment is below the 50% floor is scaled up to the floor in the same direction (sheet JY/JZ rule). A strength factor of 0 zeroes that case's plate usage.</p>
-  <table id="casesTable">
-    <thead><tr><th>Case name</th><th>Axial (k)</th><th>Shear (k)</th><th>Mx (ft-k)</th><th>My (ft-k)</th><th>Torsion (ft-k)</th><th>PLS SF</th><th></th></tr></thead>
-    <tbody id="casesBody"></tbody>
-  </table>
-  <p style="margin-top:14px"><button class="primary" id="calcBtn">Calculate base plate</button></p>
-  <div id="calcError"></div>
-</section>
+
+<div class="meta">
+  <label>TAPP QUOTE# / JOB# <input id="meta_job" value=""></label>
+  <label>CUSTOMER <input id="meta_customer" value=""></label>
+  <label>PROJECT <input id="meta_project" value=""></label>
+  <label>ITEM# / DATE <input id="meta_item" value=""></label>
+</div>
+
+<div class="toolbar">
+  <span><b>Import from PLS-POLE XML</b> <span class="note">Prefills the form. Nothing is calculated on upload — review, then press Calculate.</span></span>
+  <input type="file" id="xmlFile" accept=".xml">
+  <button class="small" id="uploadXml">Upload XML</button>
+  <button class="primary" id="calcBtn">Calculate base plate</button>
+  <span id="calcError"></span>
+</div>
+<div id="xmlStatus"></div>
+<div id="legPicker" style="display:none">
+  <label>Pole / leg <select id="legSelect"></select></label>
+  <label id="rxnWrap" style="display:none">Reaction set (base joint) <select id="rxnSelect"></select></label>
+</div>
+
+<div class="sheetgrid">
+  <div class="panel"><h2>Pole Geometry</h2><table>
+    <tr><td>Pole Shape (sides)</td><td class="val"><input class="num" id="sides" type="number" value="12"></td></tr>
+    <tr><td>Pole Base Dia (in)</td><td class="val"><input class="num" id="base_od" type="number" step="any" value="46.5"></td></tr>
+    <tr><td>Pole Base Thickness (in)</td><td class="val"><input class="num" id="wall" type="number" step="any" value="0.3125"></td></tr>
+    <tr><td>Pole Material Yield (ksi)</td><td class="val"><input class="num" id="pole_yield" type="number" step="any" value="65"></td></tr>
+    <tr><td>Shaft Capacity check</td><td class="val"><input class="num" id="shaft_capacity_perc" type="number" step="any" value="0.5"></td></tr>
+    <tr><td>PLS shaft moment capacity (ft-k)</td><td class="val"><input class="num" id="shaft_capacity_ftk" type="number" step="any" value="2622.61"></td></tr>
+    <tr><td>Strength Reduction Factor BPL</td><td class="val"><input class="num" id="sf_plate" type="number" step="any" value="1"></td></tr>
+    <tr><td>Strength Reduction Factor AB</td><td class="val"><input class="num" id="sf_bolt" type="number" step="any" value="1"></td></tr>
+    <tr><td>Summary AB Usage ratio</td><td class="val"><span class="calc" id="calc_ab_usage">—</span></td></tr>
+    <tr><td>Summary BP Usage ratio</td><td class="val"><span class="calc" id="calc_bp_usage">—</span></td></tr>
+    <tr><td>Governing moment (ft-k)</td><td class="val"><span class="calc" id="calc_governing_moment">—</span></td></tr>
+    <tr><td>50% floor moment (ft-k)</td><td class="val"><span class="calc" id="calc_floor_moment">—</span></td></tr>
+  </table></div>
+  <div class="panel"><h2>Anchor Bolt Data</h2><table>
+    <tr><td>Anchor Bolt</td><td class="val"><input id="bolt_grade" value='2.25"-18J' style="width:92px;padding:4px;border:1px solid #bbb;background:#fff2cc;box-sizing:border-box"></td></tr>
+    <tr><td>Bolt Dia (in)</td><td class="val"><input class="num" id="bolt_dia" type="number" step="any" value="2.25"></td></tr>
+    <tr><td>Bolt Fy (ksi)</td><td class="val"><input class="num" id="bolt_yield" type="number" step="any" value="75"></td></tr>
+    <tr><td>Bolt Fu (ksi)</td><td class="val"><input class="num" id="bolt_fu" type="number" step="any" value="100"></td></tr>
+    <tr><td>Tensile Area As (in²)</td><td class="val"><input class="num" id="tensile_area" type="number" step="any" value="3.25"></td></tr>
+    <tr><td>Gross Area Ag (in²)</td><td class="val"><input class="num" id="gross_area" type="number" step="any" value="3.9740625"></td></tr>
+    <tr><td>Nut width (in)</td><td class="val"><input class="num" id="nut_width" type="number" step="any" value="4.0625"></td></tr>
+    <tr><td>Bolts Qty Calc</td><td class="val"><span class="calc" id="calc_bolt_qty_calc">—</span></td></tr>
+    <tr><td>Bolts Qty Ovrrd</td><td class="val"><input class="num" id="bolt_qty_override" type="number" step="any"></td></tr>
+    <tr><td>Bolts Qty Use</td><td class="val"><span class="calc" id="calc_bolt_qty_use">—</span></td></tr>
+    <tr><td>Bolt@0deg</td><td class="val"><select id="bolt_at_0"><option value="yes" selected>Yes</option><option value="no">No</option></select></td></tr>
+    <tr><td>Bolts Spacing (in)</td><td class="val"><span class="calc" id="calc_spacing">—</span></td></tr>
+    <tr><td>Rod Capacity (kips)</td><td class="val"><span class="calc" id="calc_rod_capacity">—</span></td></tr>
+    <tr><td>Max Rod Force (kips)</td><td class="val"><span class="calc" id="calc_max_rod_force">—</span></td></tr>
+  </table></div>
+  <div class="panel"><h2>Base Plate Properties</h2><table>
+    <tr><td>Bolt Circle Cal (in)</td><td class="val"><span class="calc" id="calc_bolt_circle_calc">—</span></td></tr>
+    <tr><td>Bolt Circle Ovrrd</td><td class="val"><input class="num" id="bolt_circle_override" type="number" step="any"></td></tr>
+    <tr><td>Bolt Circle Use (in)</td><td class="val"><span class="calc" id="calc_bolt_circle_use">—</span></td></tr>
+    <tr><td>Base plate width (in)</td><td class="val"><span class="calc" id="calc_plate_width">—</span></td></tr>
+    <tr><td>Base plate ID (in)</td><td class="val"><span class="calc" id="calc_plate_id">—</span></td></tr>
+    <tr><td>Plate shape</td><td class="val"><select id="plate_shape"><option selected>Round</option><option>12-Sided</option><option>Square</option></select></td></tr>
+    <tr><td>Material Grade</td><td class="val"><select id="plate_grade"><option selected>A572-60</option><option>A572-50</option><option>A36</option></select></td></tr>
+    <tr><td>Plate Yield (ksi)</td><td class="val"><input class="num" id="plate_yield" type="number" step="any" value="60"></td></tr>
+    <tr><td>BP Edge</td><td class="val"><input class="num" id="bp_edge" type="number" step="any" value="6"></td></tr>
+    <tr><td>Min Thick (in)</td><td class="val"><input class="num" id="min_thick" type="number" step="any" value="1.5"></td></tr>
+    <tr><td>Plate Thick Calc (in)</td><td class="val"><span class="calc" id="calc_plate_thick_calc">—</span></td></tr>
+    <tr><td>Plate Thick Ovrrd (in)</td><td class="val"><input class="num" id="plate_thick_override" type="number" step="any"></td></tr>
+    <tr><td>Plate Thick Use (in)</td><td class="val"><span class="calc" id="calc_plate_thick_use">—</span></td></tr>
+    <tr><td>AB Hole in Plate (in)</td><td class="val"><input class="num" id="hole_dia" type="number" step="any" value="2.625"></td></tr>
+    <tr><td>Required thickness t_req (in)</td><td class="val"><span class="calc" id="calc_t_req">—</span></td></tr>
+    <tr><td>Effective width (in)</td><td class="val"><span class="calc" id="calc_bend_width">—</span></td></tr>
+  </table></div>
+  <div class="panel"><h2>Checks &amp; Weights</h2><table>
+    <tr><td>Overall</td><td class="val"><span class="calc" id="calc_overall">—</span></td></tr>
+    <tr><td colspan="2"><div id="checksCompact" class="note">Press Calculate to run the checks.</div></td></tr>
+    <tr><td>AB Weight (lbs)</td><td class="val"><span class="calc" id="calc_ab_weight">—</span></td></tr>
+    <tr><td>Template Weight (lbs)</td><td class="val"><span class="calc" id="calc_template_weight">—</span></td></tr>
+    <tr><td>Anchor Cage Total (lbs)</td><td class="val"><span class="calc" id="calc_cage_total">—</span></td></tr>
+    <tr><td>Base Plate Final Weight (lbs)</td><td class="val"><span class="calc" id="calc_plate_final">—</span></td></tr>
+    <tr><td>Rod Length (ft)</td><td class="val"><span class="calc" id="calc_rod_length">—</span></td></tr>
+  </table></div>
+</div>
+
+<div class="summarybar" id="summarySentence" style="display:none"></div>
+
+<h2 class="sec">Base Reactions — All Load Cases</h2>
+<p class="note">Moments in ft-k, forces in kips. A case whose raw resultant moment is below the 50% floor is scaled up to the floor in the same direction (sheet JY/JZ rule). A strength factor of 0 zeroes that case's plate usage.</p>
+<table class="data" id="casesTable">
+  <thead><tr><th>Case name</th><th>Axial (k)</th><th>Shear (k)</th><th>Mx (ft-k)</th><th>My (ft-k)</th><th>Torsion (ft-k)</th><th>PLS SF</th><th></th></tr></thead>
+  <tbody id="casesBody"></tbody>
+</table>
+<p><button class="small" id="addCase">+ Add case</button> <button class="primary" id="calcBtn2">Calculate base plate</button></p>
+
+<details>
+  <summary>More inputs — weights &amp; development length (defaults are the STR017 values; most poles need no change here)</summary>
+  <table class="data"><tbody>
+    <tr><td>Rod weight (lb/ft)</td><td><input class="num" id="rod_w_lbft" type="number" step="any" value="14.63"></td></tr>
+    <tr><td>Template count</td><td><input class="num" id="template_count" type="number" value="2"></td></tr>
+    <tr><td>Template weight 1 (lb)</td><td><input class="num" id="template_w1" type="number" step="any" value="4.38"></td></tr>
+    <tr><td>Template weight 2 (lb)</td><td><input class="num" id="template_w2" type="number" step="any" value="0.89"></td></tr>
+    <tr><td>Template thickness 1 (in)</td><td><input class="num" id="template_t1" type="number" step="any" value="0.375"></td></tr>
+    <tr><td>Template thickness 2 (in)</td><td><input class="num" id="template_t2" type="number" step="any" value="0.375"></td></tr>
+    <tr><td>Template ID drop (in)</td><td><input class="num" id="template_id_drop" type="number" step="any" value="12"></td></tr>
+    <tr><td>Concrete f'c (ksi)</td><td><input class="num" id="fc_ksi" type="number" step="any" value="3"></td></tr>
+    <tr><td>Rod projection (in)</td><td><input class="num" id="projection_in" type="number" step="any" value="12"></td></tr>
+  </tbody></table>
+</details>
 
 <section id="results" style="display:none">
-  <h2>Results</h2>
+  <h2 class="sec">Results</h2>
   <div class="cards" id="summaryCards"></div>
-  <h3>Calculation steps — formula, plain explanation, inputs, result</h3>
-  <div id="steps"></div>
   <h3>Per-case results</h3>
   <div id="caseResults"></div>
-  <h3>Checks (sheet Valid / Error block)</h3>
-  <div id="checks"></div>
+  <details>
+    <summary>Calculation steps — formula, plain explanation, inputs, result (like clicking a cell in Excel)</summary>
+    <div id="steps"></div>
+  </details>
+  <details>
+    <summary>Bolt angles — X / Y table (Excel columns W–AE)</summary>
+    <div id="boltAngles"></div>
+  </details>
+  <details>
+    <summary>Checks — full table with formula and explanation</summary>
+    <div id="checks"></div>
+  </details>
 </section>
 
 <section id="validation" style="display:none">
-  <h2>Validation against the Drive workbook</h2>
+  <h2 class="sec">Validation against the Drive workbook</h2>
   <p class="note">Tolerance: 0.5% relative. Mismatches are listed honestly — nothing is fudged. "Reference" samples show the workbook's cached values; their full input sets were not extracted, so they are not recomputed.</p>
   <div id="validationBody"></div>
 </section>
-</main>
+<p class="note">Yellow cells = type here. Grey cells = calculated, read-only. The header fields (Quote / Customer / Project / Item) are labels only and are not sent to the calculation.</p>
+</div>
 <script>
 const $ = id => document.getElementById(id);
 const num = (id, dflt) => { const v = $(id).value; return v === '' || v == null ? dflt : parseFloat(v); };
@@ -315,12 +374,29 @@ $('uploadXml').onclick = async () => {
     pick();
   } catch (e) { $('xmlStatus').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
 };
+function setCalc(id, v) { const el = $(id); if (el) el.textContent = fmt(v); }
 $('calcBtn').onclick = async () => {
   $('calcError').innerHTML = '';
   try {
     const j = await api('/api/calculate', gather());
     const s = j.summary;
     $('results').style.display = '';
+    setCalc('calc_ab_usage', s.ab_usage); setCalc('calc_bp_usage', s.bp_usage);
+    setCalc('calc_bolt_qty_calc', s.bolt_qty_calc); setCalc('calc_bolt_qty_use', s.bolt_qty_use);
+    setCalc('calc_spacing', s.spacing); setCalc('calc_rod_capacity', s.rod_capacity);
+    setCalc('calc_max_rod_force', s.max_rod_force);
+    setCalc('calc_bolt_circle_calc', s.bolt_circle_calc); setCalc('calc_bolt_circle_use', s.bolt_circle_use);
+    setCalc('calc_plate_width', s.plate_width); setCalc('calc_plate_id', s.plate_id);
+    setCalc('calc_plate_thick_calc', s.plate_thick_calc); setCalc('calc_plate_thick_use', s.plate_thick_use);
+    setCalc('calc_t_req', s.t_req); setCalc('calc_bend_width', s.bend_line_width);
+    setCalc('calc_governing_moment', s.governing_moment); setCalc('calc_floor_moment', s.floor_moment);
+    setCalc('calc_ab_weight', s.weights.ab_weight); setCalc('calc_template_weight', s.weights.template_weight);
+    setCalc('calc_cage_total', s.weights.cage_total); setCalc('calc_plate_final', s.weights.plate_final);
+    setCalc('calc_rod_length', s.weights.rod_length_ft);
+    $('calc_overall').textContent = s.overall;
+    $('calc_overall').className = 'calc ' + (s.overall === 'OK' ? 'ok' : 'bad');
+    $('summarySentence').style.display = '';
+    $('summarySentence').innerHTML = `<b>Summary:</b> Base Plate — ${fmt(s.plate_thick_use)} in Thick, ${esc($('plate_shape').value)} Plate ${fmt(s.plate_width)} in O.D. — (${s.bolt_qty_use}) - ${esc($('bolt_grade').value)} Anchor Bolts on ${fmt(s.bolt_circle_use)}" BCD — Overall: <b>${esc(s.overall)}</b> &nbsp;|&nbsp; Governing case: ${esc(s.governing_case)}`;
     $('summaryCards').innerHTML = [
       ['Overall', s.overall], ['AB usage', fmt(s.ab_usage)], ['BP usage', fmt(s.bp_usage)],
       ['Plate thickness used (in)', fmt(s.plate_thick_use)],
@@ -333,33 +409,44 @@ $('calcBtn').onclick = async () => {
       ['Governing case', s.governing_case]
     ].map(([k, v]) => `<div class="card"><span>${esc(k)}</span><b>${v}</b></div>`).join('');
     $('steps').innerHTML = j.steps.map(st => `
-      <div class="step"><h4>${esc(st.step)}</h4>
+      <details class="step"><summary>${esc(st.step)} — <b>${fmt(st.result)}</b> ${st.unit ? esc(st.unit) : ''}</summary>
       <div><code>${esc(st.formula)}</code></div>
       <p class="explain">${esc(st.explain)}</p>
       <div class="kv">Inputs — ${kv(st.inputs)}</div>
       <div class="kv">Result — <b>${kv(st.result)}</b> ${st.unit ? esc(st.unit) : ''}</div>
-      </div>`).join('');
-    $('caseResults').innerHTML = `<table><thead><tr><th>Case</th><th>Axial</th><th>Shear</th><th>Mx used</th><th>My used</th><th>Torsion</th><th>SF</th><th>Max comp</th><th>Max ten*</th><th>Max shear</th><th>Max force</th><th>t_min</th><th>Usage</th></tr></thead><tbody>` +
+      </details>`).join('');
+    const posStep = j.steps.find(st => st.step.indexOf('Bolt positions') >= 0);
+    if (posStep && Array.isArray(posStep.inputs['bolt angles'])) {
+      const bcd = s.bolt_circle_use;
+      $('boltAngles').innerHTML = `<table class="data"><thead><tr><th>Bolt Angle</th><th>X (in)</th><th>Y (in)</th></tr></thead><tbody>` +
+        posStep.inputs['bolt angles'].map(a => {
+          const rad = a * Math.PI / 180;
+          return `<tr><td>${fmt(a)}</td><td>${fmt(Math.cos(rad) * bcd / 2)}</td><td>${fmt(Math.sin(rad) * bcd / 2)}</td></tr>`;
+        }).join('') + `</tbody></table>`;
+    } else { $('boltAngles').innerHTML = '<p class="note">Bolt positions are in the “Bolt positions and group inertias” calculation step.</p>'; }
+    $('caseResults').innerHTML = `<table class="data"><thead><tr><th>Case</th><th>Axial</th><th>Shear</th><th>Mx used</th><th>My used</th><th>Torsion</th><th>SF</th><th>Max comp</th><th>Max ten*</th><th>Max shear</th><th>Max force</th><th>t_min</th><th>Usage</th></tr></thead><tbody>` +
       j.cases.map(c => `<tr class="${c.name === s.governing_case ? 'gov' : ''}"><td>${esc(c.name)}</td><td>${fmt(c.axial)}</td><td>${fmt(c.shear)}</td><td>${fmt(c.mx_used)}</td><td>${fmt(c.my_used)}</td><td>${fmt(c.torsion)}</td><td>${fmt(c.sf)}</td><td>${fmt(c.max_comp)}</td><td>${fmt(c.max_ten)}</td><td>${fmt(c.max_shear)}</td><td><b>${fmt(c.max_force)}</b></td><td>${fmt(c.t_min)}</td><td><b>${fmt(c.usage)}</b></td></tr>`).join('') + `</tbody></table>
       <p class="note">* Max ten follows the sheet's own definition: max compression minus the axial share per bolt (KG = KH − P/n). Highlighted row = governing case.</p>`;
-    $('checks').innerHTML = `<table><thead><tr><th>Check</th><th>Result</th><th>Formula</th><th>What it means</th><th>Detail</th></tr></thead><tbody>` +
+    $('checksCompact').innerHTML = s.checks.map(c => `${esc(c.name)}: <span class="${c.result === 'Valid' ? 'ok' : 'bad'}">${esc(c.result)}</span>`).join('<br>');
+    $('checks').innerHTML = `<table class="data"><thead><tr><th>Check</th><th>Result</th><th>Formula</th><th>What it means</th><th>Detail</th></tr></thead><tbody>` +
       s.checks.map(c => `<tr><td>${esc(c.name)}</td><td class="${c.result === 'Valid' ? 'ok' : 'bad'}">${esc(c.result)}</td><td><code>${esc(c.formula)}</code></td><td>${esc(c.explain)}</td><td>${esc(c.detail || '')}</td></tr>`).join('') + `</tbody></table>`;
     $('results').scrollIntoView();
   } catch (e) { $('calcError').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
 };
+$('calcBtn2').onclick = () => $('calcBtn').click();
 $('runValidation').onclick = async () => {
   try {
     const j = await api('/api/validation');
     $('validation').style.display = '';
     $('validationBody').innerHTML = j.samples.map(s => {
       if (s.type === 'reference') {
-        return `<h3>${esc(s.label)}</h3><p class="note">${esc(s.note)}</p><table><thead><tr><th>Field</th><th>Cached value</th></tr></thead><tbody>` +
+        return `<h3>${esc(s.label)}</h3><p class="note">${esc(s.note)}</p><table class="data"><thead><tr><th>Field</th><th>Cached value</th></tr></thead><tbody>` +
           Object.entries(s.cached).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${fmt(v)}</td></tr>`).join('') + `</tbody></table>`;
       }
       return `<h3>${esc(s.label)}</h3><p>Summary values: <b>${s.passed}/${s.total} pass</b> (tolerance 0.5%). Per-case rows compared: ${s.case_count}; worst per-case difference: ${fmt(s.worst_case_diff_pct)}%.</p>
-      <table><thead><tr><th>Value</th><th>App</th><th>Workbook</th><th>Diff %</th><th>Result</th></tr></thead><tbody>` +
+      <table class="data"><thead><tr><th>Value</th><th>App</th><th>Workbook</th><th>Diff %</th><th>Result</th></tr></thead><tbody>` +
       s.checks.map(c => `<tr><td>${esc(c.name)}</td><td>${fmt(c.app)}</td><td>${fmt(c.expected)}</td><td>${c.diff_pct == null ? '—' : fmt(c.diff_pct)}</td><td class="${c.pass ? 'ok' : 'bad'}">${c.pass ? 'PASS' : 'FAIL'}</td></tr>`).join('') + `</tbody></table>` +
-      (s.case_mismatches.length ? `<p>Mismatching per-case rows (first ${s.case_mismatches.length}):</p><table><thead><tr><th>Case</th><th>Field</th><th>App</th><th>Workbook</th><th>Diff %</th></tr></thead><tbody>` +
+      (s.case_mismatches.length ? `<p>Mismatching per-case rows (first ${s.case_mismatches.length}):</p><table class="data"><thead><tr><th>Case</th><th>Field</th><th>App</th><th>Workbook</th><th>Diff %</th></tr></thead><tbody>` +
       s.case_mismatches.map(m => `<tr><td>${esc(m.case)}</td><td>${esc(m.field)}</td><td>${fmt(m.app)}</td><td>${fmt(m.expected)}</td><td>${fmt(m.diff_pct)}</td></tr>`).join('') + `</tbody></table>`
       : `<p class="ok">All per-case max-bolt, thickness and usage values match within tolerance.</p>`);
     }).join('');

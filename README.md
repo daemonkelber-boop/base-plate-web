@@ -22,9 +22,15 @@ and anchor bolts and gives a YES/NO verdict per pole.
   strength factor is 0, the Valid/Error check block, and weights.
   Where the Basis document flags a TAPP-specific rule vs ASCE 48-19,
   the app follows TAPP.
-- **Formulas visible:** every calculation step on the results page
-  shows the actual formula used AND a plain-language explanation, with
-  its input values and computed result beside it. No black-box numbers.
+- **Layout:** sheet-style, like the Excel structure sheet — Pole
+  Geometry | Anchor Bolt Data | Base Plate Properties | Checks &
+  Weights side by side, a summary sentence, then the load-case table.
+  Yellow cells are inputs, grey cells are calculated. Header fields
+  (Quote / Customer / Project / Item) are labels only.
+- **Formulas visible:** every calculation step is shown collapsed
+  (like clicking a cell in Excel) with the actual formula used AND a
+  plain-language explanation, with its input values and computed
+  result beside it. No black-box numbers.
 - **Validation panel:** compares app outputs against the Drive
   workbook's cached values (tolerance 0.5%) and reports pass/fail per
   value, honestly — mismatches are listed, never fudged.
