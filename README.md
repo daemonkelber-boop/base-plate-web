@@ -279,6 +279,28 @@ touching other keys.
 - `set_password.py` — deploy-time password helper (hash + salt only).
 - `data/` — runtime only (git-ignored); holds `config.json`.
 
+## Streamlit version (testing phase)
+
+`streamlit_app.py` is the same engine (`base_plate_calc.py`,
+`xml_import.py`, and the validation datasets) with a Streamlit
+front end, for hosting on Streamlit Community Cloud. It is
+separate from the Mac mini app: nothing is installed on the mini
+for this, and the mini's updater only syntax-checks
+`streamlit_app.py` on pull (compiling does not need Streamlit
+installed).
+
+- Local run: `pip install -r requirements.txt`, then
+  `streamlit run streamlit_app.py`.
+- Cloud deploy: at share.streamlit.io, New app → repository
+  `daemonkelber-boop/base-plate-web`, branch `main`, main file
+  `streamlit_app.py`. Community Cloud connects to public or
+  private repos; a private repo needs the extra GitHub permission
+  it asks for. The app URL it assigns is the testing link.
+- Testing differences from the main app, by design: no password
+  gate, and uploads are not logged to the evaluation database
+  (Streamlit Cloud's filesystem does not persist, so a log
+  written there would not survive a restart).
+
 ## Source of truth
 
 The calculation chain was implemented from the Drive workbook's
